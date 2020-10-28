@@ -23,6 +23,10 @@ import com.alipay.sofa.registry.core.model.AppRevisionKey;
 import com.alipay.sofa.registry.log.Logger;
 import com.alipay.sofa.registry.log.LoggerFactory;
 import com.alipay.sofa.registry.server.session.node.service.AppRevisionNodeService;
+import com.alipay.sofa.registry.task.listener.TaskEvent;
+import com.alipay.sofa.registry.task.listener.TaskEvent.TaskType;
+import com.alipay.sofa.registry.task.listener.TaskListener;
+import com.alipay.sofa.registry.task.listener.TaskListenerManager;
 import com.alipay.sofa.registry.util.RevisionUtils;
 import com.alipay.sofa.registry.util.SingleFlight;
 import com.google.common.collect.Sets;
@@ -44,6 +48,7 @@ public class AppRevisionCacheRegistry {
     private String                                                                  keysDigest         = "";
     final private Map<String /*interface*/, Map<String /*appname*/, Set<String>>> interfaceRevisions = new ConcurrentHashMap<>();
     private SingleFlight                                                            singleFlight       = new SingleFlight();
+    private final Map<String, Set<String>>                                          appInterfaces      = new ConcurrentHashMap<>();
 
     public AppRevisionCacheRegistry() {
     }
@@ -86,11 +91,19 @@ public class AppRevisionCacheRegistry {
         }
     }
 
+    public void registerLocalRevision(String appName, String revision) {
+        //todo
+    }
+
     private String generateKeysDigest() {
         return RevisionUtils.revisionsDigest(new ArrayList<>(registry.keySet()));
     }
 
     private void onInterfaceChanged(String dataInfoId) {
+    }
+
+    public Set<String> searchInterfaces(String appDataInfoId) {
+        return appInterfaces.get(appDataInfoId);
     }
 
     private class AppRevisionRegisterTask implements Callable {

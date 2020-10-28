@@ -18,9 +18,13 @@ package com.alipay.sofa.registry.common.model.store;
 
 import java.util.List;
 
+import com.alipay.sofa.registry.common.model.AppRegisterServerDataBox;
+import com.alipay.sofa.registry.common.model.AppRegisterServerDataBox.ParamInfo;
+import com.alipay.sofa.registry.common.model.AppRegisterServerDataBox.ServiceParamInfo;
 import com.alipay.sofa.registry.common.model.PublishType;
 import com.alipay.sofa.registry.common.model.ServerDataBox;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.sun.org.apache.bcel.internal.generic.IF_ACMPEQ;
 
 /**
  *
@@ -83,25 +87,6 @@ public class Publisher extends BaseInfo {
         }
         sb.append(",").append("publishType=").append(publishType);
         return sb.toString();
-    }
-
-    /**
-     * change publisher word cache
-     * @param publisher
-     * @return
-     */
-    public static Publisher internPublisher(Publisher publisher) {
-        publisher.setRegisterId(publisher.getRegisterId());
-        publisher.setDataInfoId(publisher.getDataInfoId());
-        publisher.setInstanceId(publisher.getInstanceId());
-        publisher.setGroup(publisher.getGroup());
-        publisher.setDataId(publisher.getDataId());
-        publisher.setClientId(publisher.getClientId());
-        publisher.setCell(publisher.getCell());
-        publisher.setProcessId(publisher.getProcessId());
-        publisher.setAppName(publisher.getAppName());
-
-        return publisher;
     }
 
 }

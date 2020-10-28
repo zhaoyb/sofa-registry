@@ -19,6 +19,7 @@ package com.alipay.sofa.registry.server.data.remoting.sessionserver.handler;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.alipay.sofa.registry.common.model.PublisherInternUtil;
 import com.alipay.sofa.registry.common.model.constants.ValueConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -87,7 +88,7 @@ public class PublishDataHandler extends AbstractServerHandler<PublishDataRequest
 
     @Override
     public Object doHandle(Channel channel, PublishDataRequest request) {
-        Publisher publisher = Publisher.internPublisher(request.getPublisher());
+        Publisher publisher = PublisherInternUtil.internPublisher(request.getPublisher());
         if (forwardService.needForward()) {
             LOGGER.warn("[forward] Publish request refused, request: {}", request);
             CommonResponse response = new CommonResponse();

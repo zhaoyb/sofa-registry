@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import com.alipay.sofa.registry.common.model.PublisherInternUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.alipay.sofa.registry.common.model.CommonResponse;
@@ -93,7 +94,7 @@ public class DatumSnapshotHandler extends AbstractServerHandler<DatumSnapshotReq
         List<Publisher> publishers = request.getPublishers();
         if (publishers != null) {
             for (Publisher publisher : publishers) {
-                Publisher.internPublisher(publisher);
+                PublisherInternUtil.internPublisher(publisher);
                 pubMap.put(publisher.getRegisterId(), publisher);
             }
         }

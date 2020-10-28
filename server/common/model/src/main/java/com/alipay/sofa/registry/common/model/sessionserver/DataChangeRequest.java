@@ -19,6 +19,7 @@ package com.alipay.sofa.registry.common.model.sessionserver;
 import com.alipay.sofa.registry.common.model.store.WordCache;
 
 import java.io.Serializable;
+import java.util.Set;
 
 /**
  * request to notify sessionserver when data changed
@@ -36,6 +37,8 @@ public class DataChangeRequest implements Serializable {
 
     private long              version;
 
+    private Set<String>       revisions;
+
     /**
      * constructor
      */
@@ -48,10 +51,12 @@ public class DataChangeRequest implements Serializable {
      * @param dataCenter
      * @param version
      */
-    public DataChangeRequest(String dataInfoId, String dataCenter, long version) {
+    public DataChangeRequest(String dataInfoId, String dataCenter, long version,
+                             Set<String> revisions) {
         this.dataInfoId = dataInfoId;
         this.dataCenter = dataCenter;
         this.version = version;
+        this.revisions = revisions;
     }
 
     /**
@@ -106,6 +111,24 @@ public class DataChangeRequest implements Serializable {
      */
     public void setVersion(long version) {
         this.version = version;
+    }
+
+    /**
+     * Getter method for property <tt>revisions</tt>.
+     *
+     * @return property value of revisions
+     */
+    public Set<String> getRevisions() {
+        return revisions;
+    }
+
+    /**
+     * Setter method for property <tt>revisions</tt>.
+     *
+     * @param revisions value to be assigned to property revisions
+     */
+    public void setRevisions(Set<String> revisions) {
+        this.revisions = revisions;
     }
 
     @Override

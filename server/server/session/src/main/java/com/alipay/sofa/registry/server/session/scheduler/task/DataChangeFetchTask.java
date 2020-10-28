@@ -16,40 +16,40 @@
  */
 package com.alipay.sofa.registry.server.session.scheduler.task;
 
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Predicate;
-
+import com.alipay.remoting.util.StringUtils;
 import com.alipay.sofa.registry.common.model.dataserver.Datum;
 import com.alipay.sofa.registry.common.model.sessionserver.DataChangeRequest;
+import com.alipay.sofa.registry.common.model.store.AppPublisher;
 import com.alipay.sofa.registry.common.model.store.BaseInfo.ClientVersion;
+import com.alipay.sofa.registry.common.model.store.DataInfo;
+import com.alipay.sofa.registry.common.model.store.Publisher;
 import com.alipay.sofa.registry.common.model.store.Subscriber;
 import com.alipay.sofa.registry.common.model.store.URL;
-import com.alipay.sofa.registry.core.model.ReceivedData;
+import com.alipay.sofa.registry.core.model.AssembleType;
 import com.alipay.sofa.registry.core.model.ScopeEnum;
 import com.alipay.sofa.registry.log.Logger;
 import com.alipay.sofa.registry.log.LoggerFactory;
+import com.alipay.sofa.registry.server.session.assemble.SubscriberAssembleStrategy;
 import com.alipay.sofa.registry.server.session.bootstrap.SessionServerConfig;
-import com.alipay.sofa.registry.server.session.cache.CacheAccessException;
-import com.alipay.sofa.registry.server.session.cache.CacheService;
-import com.alipay.sofa.registry.server.session.cache.DatumKey;
-import com.alipay.sofa.registry.server.session.cache.Key;
-import com.alipay.sofa.registry.server.session.cache.Key.KeyType;
-import com.alipay.sofa.registry.server.session.cache.Value;
-import com.alipay.sofa.registry.server.session.converter.ReceivedDataConverter;
+import com.alipay.sofa.registry.server.session.cache.AppRevisionCacheRegistry;
+import com.alipay.sofa.registry.server.session.cache.SessionDatumCacheDecorator;
+import com.alipay.sofa.registry.server.session.push.FirePushService;
 import com.alipay.sofa.registry.server.session.scheduler.ExecutorManager;
 import com.alipay.sofa.registry.server.session.store.Interests;
 import com.alipay.sofa.registry.server.session.store.ReSubscribers;
 import com.alipay.sofa.registry.task.batcher.TaskProcessor.ProcessingResult;
 import com.alipay.sofa.registry.task.listener.TaskEvent;
-import com.alipay.sofa.registry.task.listener.TaskEvent.TaskType;
 import com.alipay.sofa.registry.task.listener.TaskListenerManager;
-import com.alipay.sofa.registry.util.DatumVersionUtil;
+import org.springframework.util.CollectionUtils;
+
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -58,122 +58,153 @@ import com.alipay.sofa.registry.util.DatumVersionUtil;
  */
 public class DataChangeFetchTask extends AbstractSessionTask {
 
-    private final static Logger       LOGGER     = LoggerFactory
-                                                     .getLogger(DataChangeFetchTask.class);
+    private final static Logger              LOGGER    = LoggerFactory
+                                                           .getLogger(DataChangeFetchTask.class);
 
-    private static final Logger       taskLogger = LoggerFactory.getLogger(
-                                                     DataChangeFetchTask.class, "[Task]");
+    private final SessionServerConfig        sessionServerConfig;
 
-    private final SessionServerConfig sessionServerConfig;
+    private static final String              APP_GROUP = "SOFA.APP";
 
     /**
      * trigger task com.alipay.sofa.registry.server.meta.listener process
      */
-    private final TaskListenerManager taskListenerManager;
+    private final TaskListenerManager        taskListenerManager;
 
-    private final ExecutorManager     executorManager;
+    private final ExecutorManager            executorManager;
 
-    private DataChangeRequest         dataChangeRequest;
+    private DataChangeRequest                dataChangeRequest;
 
-    private final Interests           sessionInterests;
+    private final Interests                  sessionInterests;
 
-    private final CacheService        sessionCacheService;
+    private final SessionDatumCacheDecorator sessionDatumCacheDecorator;
+
+    private final FirePushService            firePushService;
+
+    private final SubscriberAssembleStrategy subscriberAssembleStrategy;
+
+    private final AppRevisionCacheRegistry   appRevisionCacheRegistry;
 
     public DataChangeFetchTask(SessionServerConfig sessionServerConfig,
                                TaskListenerManager taskListenerManager,
                                ExecutorManager executorManager, Interests sessionInterests,
-                               CacheService sessionCacheService) {
+                               SubscriberAssembleStrategy subscriberAssembleStrategy,
+                               SessionDatumCacheDecorator sessionDatumCacheDecorator,
+                               AppRevisionCacheRegistry appRevisionCacheRegistry,
+                               FirePushService firePushService) {
         this.sessionServerConfig = sessionServerConfig;
         this.taskListenerManager = taskListenerManager;
         this.executorManager = executorManager;
         this.sessionInterests = sessionInterests;
-        this.sessionCacheService = sessionCacheService;
+        this.subscriberAssembleStrategy = subscriberAssembleStrategy;
+        this.appRevisionCacheRegistry = appRevisionCacheRegistry;
+        this.sessionDatumCacheDecorator = sessionDatumCacheDecorator;
+        this.firePushService = firePushService;
     }
 
     @Override
     public void execute() {
 
-        String localDataCenterID = sessionServerConfig.getSessionServerDataCenter();
+        DataInfo dataInfo = DataInfo.valueOf(dataChangeRequest.getDataInfoId());
+        Datum datum = sessionDatumCacheDecorator.getDatumCache(dataChangeRequest.getDataCenter(),
+            dataChangeRequest.getDataInfoId());
+        if (StringUtils.equals(APP_GROUP, dataInfo.getDataType())) {
 
+            refreshMeta(datum.getPubMap().values());
+
+            //dataInfoId is app, get relate interfaces dataInfoId from cache
+            Set<String> interfaces = appRevisionCacheRegistry.searchInterfaces(dataChangeRequest
+                .getDataInfoId());
+            for (String interfaceDataInfoId : interfaces) {
+                doExecute(interfaceDataInfoId);
+            }
+        }
+        doExecute(dataChangeRequest.getDataInfoId());
+    }
+
+    private void refreshMeta(Collection<Publisher> publishers) {
+        for (Publisher publisher : publishers) {
+            if (!(publisher instanceof AppPublisher)) {
+
+            }
+        }
+    }
+
+    private void doExecute(String dataInfoId) {
+        String localDataCenterID = sessionServerConfig.getSessionServerDataCenter();
         boolean ifLocalDataCenter = localDataCenterID.equals(dataChangeRequest.getDataCenter());
 
-        Datum datum = getDatumCache();
-
-        if (datum != null) {
-            PushTaskClosure pushTaskClosure = getTaskClosure(datum.getVersion());
-
-            for (ScopeEnum scopeEnum : ScopeEnum.values()) {
-                Map<InetSocketAddress, Map<String, Subscriber>> map = getCache(scopeEnum);
-                if (map != null && !map.isEmpty()) {
-                    LOGGER
-                        .info(
-                            "Get all subscribers to send from cache size:{},which dataInfoId:{} on dataCenter:{},scope:{}",
-                            map.size(), dataChangeRequest.getDataInfoId(),
-                            dataChangeRequest.getDataCenter(), scopeEnum);
-                    for (Entry<InetSocketAddress, Map<String, Subscriber>> entry : map.entrySet()) {
-                        Map<String, Subscriber> subscriberMap = entry.getValue();
-                        if (subscriberMap != null && !subscriberMap.isEmpty()) {
-
-                            //check subscriber push version
-                            Collection<Subscriber> subscribersSend = subscribersVersionCheck(subscriberMap
-                                .values());
-                            if (subscribersSend.isEmpty()) {
-                                continue;
-                            }
-
-                            //remove stopPush subscriber avoid push duplicate
-                            evictReSubscribers(subscribersSend);
-
-                            List<String> subscriberRegisterIdList = new ArrayList<>(
-                                subscriberMap.keySet());
-
-                            Subscriber subscriber = subscriberMap.values().iterator().next();
-                            boolean isOldVersion = !ClientVersion.StoreData.equals(subscriber
-                                .getClientVersion());
-
-                            switch (scopeEnum) {
-                                case zone:
-                                    if (ifLocalDataCenter) {
-                                        if (isOldVersion) {
-                                            fireUserDataElementPushTask(entry.getKey(), datum,
-                                                subscribersSend, pushTaskClosure);
-                                        } else {
-                                            fireReceivedDataMultiPushTask(datum,
-                                                subscriberRegisterIdList, subscribersSend,
-                                                ScopeEnum.zone, subscriber, pushTaskClosure);
-                                        }
-                                    }
-                                    break;
-                                case dataCenter:
-                                    if (ifLocalDataCenter) {
-                                        if (isOldVersion) {
-                                            fireUserDataElementMultiPushTask(entry.getKey(), datum,
-                                                subscribersSend, pushTaskClosure);
-                                        } else {
-                                            fireReceivedDataMultiPushTask(datum,
-                                                subscriberRegisterIdList, subscribersSend,
-                                                scopeEnum, subscriber, pushTaskClosure);
-                                        }
-                                    }
-                                    break;
-                                case global:
-                                    fireReceivedDataMultiPushTask(datum, subscriberRegisterIdList,
-                                        subscribersSend, scopeEnum, subscriber, pushTaskClosure);
-                                    break;
-                                default:
-                                    LOGGER.warn("unknown scope, {}", subscriber);
-                            }
-                        }
-                    }
-                }
+        for (ScopeEnum scopeEnum : ScopeEnum.values()) {
+            Map<InetSocketAddress, Map<String, Subscriber>> map = getCache(dataInfoId, scopeEnum);
+            if (CollectionUtils.isEmpty(map)) {
+                continue;
             }
 
-            pushTaskClosure.start();
+            LOGGER.info("Get all subscribers to send from cache size:{},which dataInfoId:{} on dataCenter:{},scope:{}",
+                    map.size(), dataInfoId, dataChangeRequest.getDataCenter(), scopeEnum);
+            for (Entry<InetSocketAddress, Map<String, Subscriber>> entry : map.entrySet()) {
+                Map<String, Subscriber> subscriberMap = entry.getValue();
 
-        } else {
-            LOGGER.error("Get publisher data error,which dataInfoId:"
-                         + dataChangeRequest.getDataInfoId() + " on dataCenter:"
-                         + dataChangeRequest.getDataCenter());
+                if (CollectionUtils.isEmpty(subscriberMap)) {
+                    continue;
+                }
+
+                //check subscriber push version
+                Collection<Subscriber> subscribers = subscribersVersionCheck(subscriberMap
+                        .values());
+                if (subscribers.isEmpty()) {
+                    continue;
+                }
+
+                //remove stopPush subscriber avoid push duplicate
+                evictReSubscribers(subscribers);
+
+                List<String> subscriberRegisterIdList = new ArrayList<>(subscriberMap.keySet());
+
+                for (AssembleType assembleType : AssembleType.values()) {
+
+                    List<Subscriber> subscribersSend = subscribers.stream().filter(
+                            subscriber -> subscriber.getAssembleType() == assembleType)
+                            .collect(Collectors.toList());
+
+                    Subscriber defaultSubscriber = subscribersSend.stream().findFirst().get();
+                    Datum datum = subscriberAssembleStrategy.assembleDatum(assembleType,
+                            sessionServerConfig.getSessionServerDataCenter(),
+                            defaultSubscriber);
+
+                    if (datum == null) {
+                        LOGGER.error("Get publisher data error,which dataInfoId:"
+                                + dataInfoId + " on dataCenter:"
+                                + dataChangeRequest.getDataCenter());
+                        continue;
+                    }
+                    PushTaskClosure pushTaskClosure = getTaskClosure(dataInfoId, datum.getVersion());
+
+                    switch (scopeEnum) {
+                        case zone:
+                        case dataCenter:
+                            if (!ifLocalDataCenter) {
+                                break;
+                            }
+                            Subscriber subscriber = subscriberMap.values().iterator().next();
+                            boolean isOldVersion = !ClientVersion.StoreData.equals(subscriber
+                                    .getClientVersion());
+                            if (isOldVersion) {
+                                firePushService.fireUserDataElementPushTask(new URL(entry.getKey()), datum, subscribersSend, pushTaskClosure, scopeEnum);
+                            } else {
+                                firePushService.fireReceivedDataMultiPushTask(datum, subscriberRegisterIdList, subscribersSend,
+                                        scopeEnum, subscriber, pushTaskClosure);
+                            }
+                            break;
+                        case global:
+                            firePushService.fireReceivedDataMultiPushTask(datum, subscriberRegisterIdList,
+                                    subscribersSend, scopeEnum, defaultSubscriber, pushTaskClosure);
+                            break;
+                        default:
+                            LOGGER.warn("unknown scope, {}", scopeEnum);
+                    }
+                    pushTaskClosure.start();
+                }
+            }
         }
     }
 
@@ -188,13 +219,12 @@ public class DataChangeFetchTask extends AbstractSessionTask {
         return subscribersSend;
     }
 
-    public PushTaskClosure getTaskClosure(Long version) {
+    public PushTaskClosure getTaskClosure(String dataInfoId, Long version) {
         //this for all this dataInfoId push result get and call back to change version
         PushTaskClosure pushTaskClosure = new PushTaskClosure(executorManager.getPushTaskCheckAsyncHashedWheelTimer(),
-                sessionServerConfig, dataChangeRequest.getDataInfoId());
+                sessionServerConfig, dataInfoId);
         pushTaskClosure.setTaskClosure((status, task) -> {
             String dataCenter = dataChangeRequest.getDataCenter();
-            String dataInfoId = dataChangeRequest.getDataInfoId();
             Long changeVersion = dataChangeRequest.getVersion();
             if (status == ProcessingResult.Success) {
 
@@ -205,17 +235,20 @@ public class DataChangeFetchTask extends AbstractSessionTask {
                 }
                 boolean result = sessionInterests.checkAndUpdateInterestVersions(dataCenter, dataInfoId, version);
                 if (result) {
-                    LOGGER.info("Push all tasks success, dataCenter:{}, dataInfoId:{}, changeVersion:{}, pushVersion:{}, update!", dataCenter,
+                    LOGGER.info("Push all tasks success, dataCenter:{}, dataInfoId:{}, changeVersion:{}, pushVersion:{}, update!",
+                            dataCenter,
                             dataInfoId, changeVersion, version);
                 } else {
                     LOGGER.info("Push all tasks success,but dataCenter:{} dataInfoId:{} version:{} need not update!",
                             dataCenter, dataInfoId, version);
-                    LOGGER.info("Push all tasks success, but dataCenter:{}, dataInfoId:{}, changeVersion:{}, pushVersion:{}, need not update!",
+                    LOGGER.info(
+                            "Push all tasks success, but dataCenter:{}, dataInfoId:{}, changeVersion:{}, pushVersion:{}, need not update!",
                             dataCenter, dataInfoId, changeVersion, version);
                 }
             } else {
                 LOGGER.warn(
-                        "Push tasks found error, subscribers version can not be update! dataCenter:{}, dataInfoId:{}, changeVersion:{}, pushVersion:{}",
+                        "Push tasks found error, subscribers version can not be update! dataCenter:{}, dataInfoId:{}, changeVersion:{}, "
+                                + "pushVersion:{}",
                         dataCenter, dataInfoId, changeVersion, version);
             }
         });
@@ -229,99 +262,9 @@ public class DataChangeFetchTask extends AbstractSessionTask {
         }
     }
 
-    private void fireReceivedDataMultiPushTask(Datum datum, List<String> subscriberRegisterIdList,
-                                               Collection<Subscriber> subscribers, ScopeEnum scopeEnum,
-                                               Subscriber subscriber, PushTaskClosure pushTaskClosure) {
-        String dataId = datum.getDataId();
-        String clientCell = sessionServerConfig.getClientCell(subscriber.getCell());
-        Predicate<String> zonePredicate = (zone) -> {
-            if (!clientCell.equals(zone)) {
-                if (ScopeEnum.zone == scopeEnum) {
-                    // zone scope subscribe only return zone list
-                    return true;
-
-                } else if (ScopeEnum.dataCenter == scopeEnum || ScopeEnum.global == scopeEnum) {
-                    // disable zone config
-                    return sessionServerConfig.isInvalidForeverZone(zone) && !sessionServerConfig
-                            .isInvalidIgnored(dataId);
-                }
-            }
-            return false;
-        };
-        ReceivedData receivedData = ReceivedDataConverter
-                .getReceivedDataMulti(datum, scopeEnum, subscriberRegisterIdList,
-                        clientCell, zonePredicate);
-
-        //trigger push to client node
-        Map<ReceivedData, URL> parameter = new HashMap<>();
-        parameter.put(receivedData, subscriber.getSourceAddress());
-        TaskEvent taskEvent = new TaskEvent(parameter, TaskType.RECEIVED_DATA_MULTI_PUSH_TASK);
-        taskEvent.setTaskClosure(pushTaskClosure);
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_SUBSCRIBERS, subscribers);
-        taskLogger.info("send {} taskURL:{},taskScope:{},,taskId={}", taskEvent.getTaskType(),
-                subscriber.getSourceAddress(), scopeEnum, taskEvent.getTaskId());
-        taskListenerManager.sendTaskEvent(taskEvent);
-    }
-
-    private Map<InetSocketAddress, Map<String, Subscriber>> getCache(ScopeEnum scopeEnum) {
-        return sessionInterests.querySubscriberIndex(dataChangeRequest.getDataInfoId(), scopeEnum);
-    }
-
-    private Datum getDatumCache() {
-        // build key
-        DatumKey datumKey = new DatumKey(dataChangeRequest.getDataInfoId(),
-            dataChangeRequest.getDataCenter());
-        Key key = new Key(KeyType.OBJ, DatumKey.class.getName(), datumKey);
-
-        // get from cache (it will fetch from backend server)
-        Value<Datum> value = null;
-        try {
-            value = sessionCacheService.getValue(key);
-        } catch (CacheAccessException e) {
-            LOGGER.error(String.format("error when access cache: %s", e.getMessage()), e);
-        }
-
-        return value == null ? null : value.getPayload();
-    }
-
-    private void fireUserDataElementPushTask(InetSocketAddress address, Datum datum,
-                                             Collection<Subscriber> subscribers,
-                                             PushTaskClosure pushTaskClosure) {
-
-        TaskEvent taskEvent = new TaskEvent(TaskType.USER_DATA_ELEMENT_PUSH_TASK);
-        taskEvent.setTaskClosure(pushTaskClosure);
-        taskEvent.setSendTimeStamp(DatumVersionUtil.getRealTimestamp(datum.getVersion()));
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_SUBSCRIBERS, subscribers);
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_DATUM, datum);
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_URL, new URL(address));
-
-        int size = datum != null && datum.getPubMap() != null ? datum.getPubMap().size() : 0;
-
-        taskLogger.info(
-            "send {} taskURL:{},dataInfoId={},dataCenter={},pubSize={},subSize={},taskId={}",
-            taskEvent.getTaskType(), address, datum.getDataInfoId(), datum.getDataCenter(), size,
-            subscribers.size(), taskEvent.getTaskId());
-        taskListenerManager.sendTaskEvent(taskEvent);
-    }
-
-    private void fireUserDataElementMultiPushTask(InetSocketAddress address, Datum datum,
-                                                  Collection<Subscriber> subscribers,
-                                                  PushTaskClosure pushTaskClosure) {
-
-        TaskEvent taskEvent = new TaskEvent(TaskType.USER_DATA_ELEMENT_MULTI_PUSH_TASK);
-        taskEvent.setTaskClosure(pushTaskClosure);
-        taskEvent.setSendTimeStamp(DatumVersionUtil.getRealTimestamp(datum.getVersion()));
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_SUBSCRIBERS, subscribers);
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_DATUM, datum);
-        taskEvent.setAttribute(Constant.PUSH_CLIENT_URL, new URL(address));
-
-        int size = datum != null && datum.getPubMap() != null ? datum.getPubMap().size() : 0;
-
-        taskLogger.info(
-            "send {} taskURL:{},dataInfoId={},dataCenter={},pubSize={},subSize={},taskId={}",
-            taskEvent.getTaskType(), address, datum.getDataInfoId(), datum.getDataCenter(), size,
-            subscribers.size(), taskEvent.getTaskId());
-        taskListenerManager.sendTaskEvent(taskEvent);
+    private Map<InetSocketAddress, Map<String, Subscriber>> getCache(String dataInfoId,
+                                                                     ScopeEnum scopeEnum) {
+        return sessionInterests.querySubscriberIndex(dataInfoId, scopeEnum);
     }
 
     @Override

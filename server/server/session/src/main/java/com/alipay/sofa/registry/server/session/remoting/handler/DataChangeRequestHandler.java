@@ -16,8 +16,17 @@
  */
 package com.alipay.sofa.registry.server.session.remoting.handler;
 
+import java.util.Collection;
+import java.util.Set;
 import java.util.concurrent.Executor;
 
+import com.alipay.remoting.util.StringUtils;
+import com.alipay.sofa.registry.common.model.dataserver.Datum;
+import com.alipay.sofa.registry.common.model.store.AppPublisher;
+import com.alipay.sofa.registry.common.model.store.DataInfo;
+import com.alipay.sofa.registry.common.model.store.Publisher;
+import com.alipay.sofa.registry.server.session.cache.AppRevisionCacheRegistry;
+import com.alipay.sofa.registry.server.session.cache.SessionDatumCacheDecorator;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.alipay.sofa.registry.common.model.Node.NodeType;
@@ -66,6 +75,12 @@ public class DataChangeRequestHandler extends AbstractClientHandler {
     @Autowired
     private DataChangeRequestHandlerStrategy dataChangeRequestHandlerStrategy;
 
+    @Autowired
+    private SessionDatumCacheDecorator       sessionDatumCacheDecorator;
+
+    @Autowired
+    private AppRevisionCacheRegistry         appRevisionCacheRegistry;
+
     @Override
     public HandlerType getType() {
         return HandlerType.PROCESSER;
@@ -97,14 +112,24 @@ public class DataChangeRequestHandler extends AbstractClientHandler {
         }
 
         try {
-            boolean result = sessionInterests.checkInterestVersions(
-                dataChangeRequest.getDataCenter(), dataChangeRequest.getDataInfoId(),
-                dataChangeRequest.getVersion());
+            DataInfo dataInfo = DataInfo.valueOf(dataChangeRequest.getDataInfoId());
+            refreshMeta(dataChangeRequest.getRevisions());
 
-            if (!result) {
-                return null;
+            if (StringUtils.equals("SOFA.APP", dataInfo.getDataType())) {
+                //dataInfoId is app, get relate interfaces dataInfoId from cache
+                Set<String> interfaces = appRevisionCacheRegistry
+                    .searchInterfaces(dataChangeRequest.getDataInfoId());
+                for (String interfaceDataInfoId : interfaces) {
+                    DataChangeRequest request = new DataChangeRequest();
+                    request.setDataInfoId(interfaceDataInfoId);
+                    request.setDataCenter(dataChangeRequest.getDataCenter());
+                    request.setVersion(dataChangeRequest.getVersion());
+                    dataChangeRequestHandlerStrategy.doFireChangFetch(request);
+
+                }
+            } else {
+                dataChangeRequestHandlerStrategy.doFireChangFetch(dataChangeRequest);
             }
-
             EXCHANGE_LOGGER.info(
                 "Data version has change,and will fetch to update!Request={},URL={}",
                 dataChangeRequest, channel.getRemoteAddress());
@@ -119,11 +144,21 @@ public class DataChangeRequestHandler extends AbstractClientHandler {
         return null;
     }
 
+    private void refreshMeta(Collection<String> revisions) {
+
+    }
+
     /**
      *
      * @param dataChangeRequest
      */
     private void fireChangFetch(DataChangeRequest dataChangeRequest) {
+        boolean result = sessionInterests.checkInterestVersions(dataChangeRequest.getDataCenter(),
+            dataChangeRequest.getDataInfoId(), dataChangeRequest.getVersion());
+
+        if (!result) {
+            return;
+        }
         dataChangeRequestHandlerStrategy.doFireChangFetch(dataChangeRequest);
     }
 

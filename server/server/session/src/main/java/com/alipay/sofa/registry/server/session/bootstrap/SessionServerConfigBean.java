@@ -155,6 +155,10 @@ public class SessionServerConfigBean implements SessionServerConfig {
 
     private int                dataChangeFetchTaskWorkerSize           = 100;
 
+    private int                newRevisionTaskMaxBufferSize            = 1000000;
+
+    private int                newRevisionTaskWorkerSize               = 100;
+
     private int                clientNodeExchangeTimeOut               = 1000;            //time out cause netty HashedWheelTimer occupy a lot of mem
 
     private int                dataNodeExchangeTimeOut                 = 3000;

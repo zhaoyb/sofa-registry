@@ -31,6 +31,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.alipay.sofa.registry.server.session.scheduler.task.DataChangeFetchTask;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -221,8 +222,7 @@ public class SessionNotifyTest extends BaseIntegrationTest {
 
                 // post sync data request
                 DataChangeRequest request = new DataChangeRequest(DataInfo.toDataInfoId(
-                        MockSyncDataHandler.dataId, DEFAULT_INSTANCE_ID, DEFAULT_GROUP), LOCAL_DATACENTER,
-                        finalI);
+                        MockSyncDataHandler.dataId, DEFAULT_INSTANCE_ID, DEFAULT_GROUP), LOCAL_DATACENTER, finalI, null);
 
                 boltChannelMap.forEach((connect,boltChannel)->{
 
@@ -238,7 +238,6 @@ public class SessionNotifyTest extends BaseIntegrationTest {
                 });
             });
         }
-
         while (true){
             TimeUnit.SECONDS.sleep(10);
         }

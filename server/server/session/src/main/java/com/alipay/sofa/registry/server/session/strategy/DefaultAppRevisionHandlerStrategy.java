@@ -20,11 +20,13 @@ import com.alipay.sofa.registry.core.model.AppRevisionRegister;
 import com.alipay.sofa.registry.core.model.RegisterResponse;
 import com.alipay.sofa.registry.remoting.Channel;
 import com.alipay.sofa.registry.server.session.cache.AppRevisionCacheRegistry;
+import com.alipay.sofa.registry.task.listener.TaskEvent;
+import com.alipay.sofa.registry.task.listener.TaskListenerManager;
 import org.springframework.beans.factory.annotation.Autowired;
 
 public class DefaultAppRevisionHandlerStrategy implements AppRevisionHandlerStrategy {
     @Autowired
-    AppRevisionCacheRegistry appRevisionCacheService;
+    private AppRevisionCacheRegistry appRevisionCacheService;
 
     @Override
     public void handleAppRevisionRegister(AppRevisionRegister appRevisionRegister,
