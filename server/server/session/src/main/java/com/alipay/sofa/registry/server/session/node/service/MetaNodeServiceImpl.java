@@ -16,10 +16,9 @@
  */
 package com.alipay.sofa.registry.server.session.node.service;
 
+import com.alipay.sofa.registry.common.model.metaserver.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import com.alipay.sofa.registry.common.model.metaserver.FetchProvideDataRequest;
-import com.alipay.sofa.registry.common.model.metaserver.ProvideData;
 import com.alipay.sofa.registry.common.model.store.URL;
 import com.alipay.sofa.registry.log.Logger;
 import com.alipay.sofa.registry.log.LoggerFactory;
@@ -31,8 +30,9 @@ import com.alipay.sofa.registry.server.session.bootstrap.SessionServerConfig;
 import com.alipay.sofa.registry.server.session.node.RaftClientManager;
 import com.alipay.sofa.registry.server.session.node.SessionNodeManager;
 
+import java.util.List;
+
 /**
- *
  * @author shangyu.wh
  * @version $Id: MetaNodeServiceImpl.java, v 0.1 2018-04-17 21:23 shangyu.wh Exp $
  */

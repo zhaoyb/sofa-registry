@@ -14,25 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alipay.sofa.registry.server.session.node.service;
+package com.alipay.sofa.registry.common.model.metaserver;
 
-import com.alipay.sofa.registry.core.model.AppRevisionRegister;
 import com.alipay.sofa.registry.core.model.AppRevisionKey;
-import com.alipay.sofa.registry.common.model.metaserver.ProvideData;
 
+import java.io.Serializable;
 import java.util.List;
 
-/**
- * @author shangyu.wh
- * @version $Id: MetaNodeService.java, v 0.1 2018-04-17 19:57 shangyu.wh Exp $
- */
-public interface MetaNodeService {
+public class FetchRevisionsRequest implements Serializable {
+    public List<AppRevisionKey> keys;
 
-    /**
-     * fetch persistence data from meta server
-     *
-     * @param dataInfoId
-     * @return
-     */
-    ProvideData fetchData(String dataInfoId);
+    public FetchRevisionsRequest(List<AppRevisionKey> keys) {
+        this.keys = keys;
+    }
 }

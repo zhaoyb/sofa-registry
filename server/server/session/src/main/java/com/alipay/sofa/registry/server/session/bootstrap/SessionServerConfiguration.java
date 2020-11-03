@@ -19,9 +19,12 @@ package com.alipay.sofa.registry.server.session.bootstrap;
 import java.util.ArrayList;
 import java.util.Collection;
 
+import com.alipay.sofa.registry.server.session.cache.*;
 import com.alipay.sofa.registry.server.session.connections.ConnectionsService;
+import com.alipay.sofa.registry.server.session.node.service.*;
 import com.alipay.sofa.registry.server.session.remoting.handler.*;
 import com.alipay.sofa.registry.server.session.resource.*;
+import com.alipay.sofa.registry.server.session.strategy.*;
 import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -36,10 +39,6 @@ import com.alipay.sofa.registry.remoting.exchange.NodeExchanger;
 import com.alipay.sofa.registry.remoting.jersey.exchange.JerseyExchange;
 import com.alipay.sofa.registry.server.session.acceptor.WriteDataAcceptor;
 import com.alipay.sofa.registry.server.session.acceptor.WriteDataAcceptorImpl;
-import com.alipay.sofa.registry.server.session.cache.CacheGenerator;
-import com.alipay.sofa.registry.server.session.cache.CacheService;
-import com.alipay.sofa.registry.server.session.cache.DatumCacheGenerator;
-import com.alipay.sofa.registry.server.session.cache.SessionCacheService;
 import com.alipay.sofa.registry.server.session.filter.DataIdMatchStrategy;
 import com.alipay.sofa.registry.server.session.filter.IPMatchStrategy;
 import com.alipay.sofa.registry.server.session.filter.ProcessFilter;
@@ -76,12 +75,6 @@ import com.alipay.sofa.registry.server.session.node.processor.ClientNodeSingleTa
 import com.alipay.sofa.registry.server.session.node.processor.ConsoleSyncSingleTaskProcessor;
 import com.alipay.sofa.registry.server.session.node.processor.DataNodeSingleTaskProcessor;
 import com.alipay.sofa.registry.server.session.node.processor.MetaNodeSingleTaskProcessor;
-import com.alipay.sofa.registry.server.session.node.service.ClientNodeService;
-import com.alipay.sofa.registry.server.session.node.service.ClientNodeServiceImpl;
-import com.alipay.sofa.registry.server.session.node.service.DataNodeService;
-import com.alipay.sofa.registry.server.session.node.service.DataNodeServiceImpl;
-import com.alipay.sofa.registry.server.session.node.service.MetaNodeService;
-import com.alipay.sofa.registry.server.session.node.service.MetaNodeServiceImpl;
 import com.alipay.sofa.registry.server.session.provideData.ProvideDataProcessor;
 import com.alipay.sofa.registry.server.session.provideData.ProvideDataProcessorManager;
 import com.alipay.sofa.registry.server.session.provideData.processor.BlackListProvideDataProcessor;
@@ -102,17 +95,6 @@ import com.alipay.sofa.registry.server.session.store.SessionDataStore;
 import com.alipay.sofa.registry.server.session.store.SessionInterests;
 import com.alipay.sofa.registry.server.session.store.SessionWatchers;
 import com.alipay.sofa.registry.server.session.store.Watchers;
-import com.alipay.sofa.registry.server.session.strategy.DataChangeRequestHandlerStrategy;
-import com.alipay.sofa.registry.server.session.strategy.PublisherHandlerStrategy;
-import com.alipay.sofa.registry.server.session.strategy.ReceivedConfigDataPushTaskStrategy;
-import com.alipay.sofa.registry.server.session.strategy.ReceivedDataMultiPushTaskStrategy;
-import com.alipay.sofa.registry.server.session.strategy.SessionRegistryStrategy;
-import com.alipay.sofa.registry.server.session.strategy.SubscriberHandlerStrategy;
-import com.alipay.sofa.registry.server.session.strategy.SubscriberMultiFetchTaskStrategy;
-import com.alipay.sofa.registry.server.session.strategy.SubscriberRegisterFetchTaskStrategy;
-import com.alipay.sofa.registry.server.session.strategy.SyncConfigHandlerStrategy;
-import com.alipay.sofa.registry.server.session.strategy.TaskMergeProcessorStrategy;
-import com.alipay.sofa.registry.server.session.strategy.WatcherHandlerStrategy;
 import com.alipay.sofa.registry.server.session.strategy.impl.DefaultDataChangeRequestHandlerStrategy;
 import com.alipay.sofa.registry.server.session.strategy.impl.DefaultPublisherHandlerStrategy;
 import com.alipay.sofa.registry.server.session.strategy.impl.DefaultPushTaskMergeProcessor;
@@ -136,7 +118,6 @@ import com.alipay.sofa.registry.task.listener.TaskListenerManager;
 import com.alipay.sofa.registry.util.PropertySplitter;
 
 /**
- *
  * @author shangyu.wh
  * @version $Id: SessionServerConfiguration.java, v 0.1 2017-11-14 11:39 synex Exp $
  */
@@ -209,6 +190,7 @@ public class SessionServerConfiguration {
             list.add(clientNodeConnectionHandler());
             list.add(cancelAddressRequestHandler());
             list.add(syncConfigHandler());
+            list.add(appRevisionRegisterHandler());
             return list;
         }
 
@@ -240,6 +222,11 @@ public class SessionServerConfiguration {
         @Bean
         public AbstractServerHandler cancelAddressRequestHandler() {
             return new CancelAddressRequestHandler();
+        }
+
+        @Bean
+        public AbstractServerHandler appRevisionRegisterHandler() {
+            return new AppRevisionRegisterHandler();
         }
 
         @Bean(name = "dataClientHandlers")
@@ -412,6 +399,11 @@ public class SessionServerConfiguration {
         public NodeManagerFactory nodeManagerFactory() {
             return new NodeManagerFactory();
         }
+
+        @Bean
+        public AppRevisionNodeService appRevisionNodeService() {
+            return new AppRevisionNodeServiceImpl();
+        }
     }
 
     @Configuration
@@ -425,6 +417,11 @@ public class SessionServerConfiguration {
         @Bean(name = "com.alipay.sofa.registry.server.session.cache.DatumKey")
         public CacheGenerator datumCacheGenerator() {
             return new DatumCacheGenerator();
+        }
+
+        @Bean
+        public AppRevisionCacheRegistry appRevisionCacheRegistry() {
+            return new AppRevisionCacheRegistry();
         }
     }
 
@@ -669,6 +666,11 @@ public class SessionServerConfiguration {
         @ConditionalOnMissingBean
         public ReceivedConfigDataPushTaskStrategy receivedConfigDataPushTaskStrategy() {
             return new DefaultReceivedConfigDataPushTaskStrategy();
+        }
+
+        @Bean
+        public AppRevisionHandlerStrategy appRevisionHandlerStrategy() {
+            return new DefaultAppRevisionHandlerStrategy();
         }
     }
 

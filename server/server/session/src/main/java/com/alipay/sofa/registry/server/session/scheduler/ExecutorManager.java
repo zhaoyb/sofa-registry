@@ -26,6 +26,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import com.alipay.sofa.registry.server.session.cache.AppRevisionCacheRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.alipay.sofa.registry.log.Logger;
@@ -42,7 +43,6 @@ import com.alipay.sofa.registry.util.NamedThreadFactory;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
- *
  * @author shangyu.wh
  * @version $Id: ExecutorManager.java, v 0.1 2017-11-28 14:41 shangyu.wh Exp $
  */
@@ -67,10 +67,14 @@ public class ExecutorManager {
     private final ThreadPoolExecutor          connectClientExecutor;
     private final ThreadPoolExecutor          publishDataExecutor;
     private final ThreadPoolExecutor          cleanInvalidClientExecutor;
+    private final ThreadPoolExecutor          refreshAppRevisionsExecutor;
 
     private final AsyncHashedWheelTimer       pushTaskCheckAsyncHashedWheelTimer;
 
     private SessionServerConfig               sessionServerConfig;
+
+    @Autowired
+    private AppRevisionCacheRegistry          appRevisionCacheRegistry;
 
     @Autowired
     private Registry                          sessionRegistry;
@@ -133,6 +137,9 @@ public class ExecutorManager {
 
         cleanInvalidClientExecutor = new ThreadPoolExecutor(1, 2/*CONFIG*/, 0, TimeUnit.SECONDS,
                 new SynchronousQueue<>(), new NamedThreadFactory("SessionScheduler-cleanInvalidClient"));
+
+        refreshAppRevisionsExecutor = new ThreadPoolExecutor(1, 2, 0, TimeUnit.SECONDS,
+                new SynchronousQueue<>(), new NamedThreadFactory("SessionScheduler-refreshAppRevision"));
 
         accessDataExecutor = reportExecutors.computeIfAbsent(ACCESS_DATA_EXECUTOR,
                 k -> new SessionThreadPoolExecutor(ACCESS_DATA_EXECUTOR,
@@ -237,6 +244,9 @@ public class ExecutorManager {
                         sessionServerConfig.getSchedulerCleanInvalidClientBackOffBound(),
                         () -> sessionRegistry.cleanClientConnect()),
                 sessionServerConfig.getSchedulerCleanInvalidClientFirstDelay(), TimeUnit.MINUTES);
+        scheduler.schedule(new TimedSupervisorTask("RefreshAppRevisions", scheduler, refreshAppRevisionsExecutor,
+                2, TimeUnit.SECONDS, 1,
+                () -> appRevisionCacheRegistry.refreshAll()), 1, TimeUnit.SECONDS);
     }
 
     public void stopScheduler() {

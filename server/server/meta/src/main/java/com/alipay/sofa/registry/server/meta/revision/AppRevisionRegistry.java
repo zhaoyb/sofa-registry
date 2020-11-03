@@ -14,25 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.alipay.sofa.registry.server.session.node.service;
+package com.alipay.sofa.registry.server.meta.revision;
 
 import com.alipay.sofa.registry.core.model.AppRevisionRegister;
 import com.alipay.sofa.registry.core.model.AppRevisionKey;
-import com.alipay.sofa.registry.common.model.metaserver.ProvideData;
+import com.alipay.sofa.registry.store.api.annotation.RaftReference;
 
 import java.util.List;
 
-/**
- * @author shangyu.wh
- * @version $Id: MetaNodeService.java, v 0.1 2018-04-17 19:57 shangyu.wh Exp $
- */
-public interface MetaNodeService {
+public class AppRevisionRegistry {
+    @RaftReference
+    private AppRevisionService appRevisionService;
 
-    /**
-     * fetch persistence data from meta server
-     *
-     * @param dataInfoId
-     * @return
-     */
-    ProvideData fetchData(String dataInfoId);
+    public void register(AppRevisionRegister appRevision) {
+        if (appRevisionService.existed(appRevision.appname, appRevision.revision)) {
+            return;
+        }
+        appRevisionService.add(appRevision);
+    }
+
+    public List<AppRevisionKey> checkRevisions(String keysDigest) {
+        if (keysDigest.equals(appRevisionService.getKeysDigest())) {
+            return null;
+        }
+        return appRevisionService.getKeys();
+    }
+
+    public List<AppRevisionRegister> fetchRevisions(List<AppRevisionKey> keys) {
+        return appRevisionService.getMulti(keys);
+    }
 }

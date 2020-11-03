@@ -16,23 +16,16 @@
  */
 package com.alipay.sofa.registry.server.session.node.service;
 
-import com.alipay.sofa.registry.core.model.AppRevisionRegister;
 import com.alipay.sofa.registry.core.model.AppRevisionKey;
-import com.alipay.sofa.registry.common.model.metaserver.ProvideData;
+import com.alipay.sofa.registry.core.model.AppRevisionRegister;
 
 import java.util.List;
 
-/**
- * @author shangyu.wh
- * @version $Id: MetaNodeService.java, v 0.1 2018-04-17 19:57 shangyu.wh Exp $
- */
-public interface MetaNodeService {
+public interface AppRevisionNodeService {
 
-    /**
-     * fetch persistence data from meta server
-     *
-     * @param dataInfoId
-     * @return
-     */
-    ProvideData fetchData(String dataInfoId);
+    void register(AppRevisionRegister appRevision);
+
+    List<AppRevisionRegister> fetchMulti(List<AppRevisionKey> keys);
+
+    List<AppRevisionKey> checkRevisions(String keysDigest);
 }

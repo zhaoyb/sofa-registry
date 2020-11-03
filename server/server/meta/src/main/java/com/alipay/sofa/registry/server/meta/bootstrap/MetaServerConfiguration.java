@@ -23,6 +23,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import com.alipay.sofa.registry.server.meta.remoting.handler.*;
+import com.alipay.sofa.registry.server.meta.revision.*;
+import com.alipay.sofa.registry.server.meta.repository.service.*;
 import com.alipay.sofa.registry.util.NamedThreadFactory;
 import com.alipay.sofa.registry.server.meta.resource.*;
 import org.glassfish.jersey.jackson.JacksonFeature;
@@ -61,12 +63,6 @@ import com.alipay.sofa.registry.server.meta.repository.NodeConfirmStatusService;
 import com.alipay.sofa.registry.server.meta.repository.RepositoryService;
 import com.alipay.sofa.registry.server.meta.repository.VersionRepositoryService;
 import com.alipay.sofa.registry.server.meta.repository.annotation.RaftAnnotationBeanPostProcessor;
-import com.alipay.sofa.registry.server.meta.repository.service.DataConfirmStatusService;
-import com.alipay.sofa.registry.server.meta.repository.service.DataRepositoryService;
-import com.alipay.sofa.registry.server.meta.repository.service.MetaRepositoryService;
-import com.alipay.sofa.registry.server.meta.repository.service.SessionConfirmStatusService;
-import com.alipay.sofa.registry.server.meta.repository.service.SessionRepositoryService;
-import com.alipay.sofa.registry.server.meta.repository.service.SessionVersionRepositoryService;
 import com.alipay.sofa.registry.server.meta.store.DataStoreService;
 import com.alipay.sofa.registry.server.meta.store.MetaStoreService;
 import com.alipay.sofa.registry.server.meta.store.SessionStoreService;
@@ -82,7 +78,6 @@ import com.alipay.sofa.registry.task.listener.TaskListenerManager;
 import com.alipay.sofa.registry.util.PropertySplitter;
 
 /**
- *
  * @author shangyu.wh
  * @version $Id: MetaServerConfiguration.java, v 0.1 2018-01-12 14:53 shangyu.wh Exp $
  */
@@ -205,6 +200,19 @@ public class MetaServerConfiguration {
     }
 
     @Configuration
+    public static class AppRevisionConfiguration {
+        @Bean
+        public AppRevisionService appRevisionService() {
+            return new RaftAppRevisionService();
+        }
+
+        @Bean
+        public AppRevisionRegistry appRevisionRegistry() {
+            return new AppRevisionRegistry();
+        }
+    }
+
+    @Configuration
     public static class MetaServerRemotingConfiguration {
 
         @Bean
@@ -225,6 +233,9 @@ public class MetaServerConfiguration {
             list.add(renewNodesRequestHandler());
             list.add(getNodesRequestHandler());
             list.add(fetchProvideDataRequestHandler());
+            list.add(addAppRevisionHandler());
+            list.add(checkRevisionsHandler());
+            list.add(fetchRevisionsHandler());
             return list;
         }
 
@@ -288,6 +299,21 @@ public class MetaServerConfiguration {
         }
 
         @Bean
+        public AbstractServerHandler addAppRevisionHandler() {
+            return new AddAppRevisionHandler();
+        }
+
+        @Bean
+        public AbstractServerHandler checkRevisionsHandler() {
+            return new CheckRevisionsHandler();
+        }
+
+        @Bean
+        public AbstractServerHandler fetchRevisionsHandler() {
+            return new FetchRevisionsHandler();
+        }
+
+        @Bean
         public NodeExchanger sessionNodeExchanger() {
             return new SessionNodeExchanger();
         }
@@ -306,6 +332,7 @@ public class MetaServerConfiguration {
         public MetaClientExchanger metaClientExchanger() {
             return new MetaClientExchanger();
         }
+
     }
 
     @Configuration
