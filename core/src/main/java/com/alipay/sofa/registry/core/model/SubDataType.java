@@ -16,7 +16,6 @@
  */
 package com.alipay.sofa.registry.core.model;
 
-
 /**
  *
  * @author xiaojian.xj
@@ -31,8 +30,7 @@ public enum SubDataType {
     sub_interface,
 
     /** sub app and interface: sub data from app and interface  */
-    sub_app_and_interface,
-    ;
+    sub_app_and_interface, ;
 
     public static boolean contains(String name) {
         for (SubDataType subDataType : values()) {
