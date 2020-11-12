@@ -34,6 +34,6 @@ public class AssembleTypeConverter {
         if (AssembleType.contains(subType)) {
             return AssembleType.valueOf(subType);
         }
-        return AssembleType.sub_app_and_interface;
+        return AssembleType.sub_interface;
     }
 }
