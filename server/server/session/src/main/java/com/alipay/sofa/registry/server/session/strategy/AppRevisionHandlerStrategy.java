@@ -23,4 +23,6 @@ import com.alipay.sofa.registry.remoting.Channel;
 public interface AppRevisionHandlerStrategy {
     void handleAppRevisionRegister(AppRevisionRegister appRevisionRegister,
                                    RegisterResponse response);
+
+    void handleNewAppRevision(AppRevisionRegister rev);
 }

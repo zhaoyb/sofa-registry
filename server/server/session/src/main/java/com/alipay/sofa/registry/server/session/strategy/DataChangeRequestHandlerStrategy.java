@@ -24,4 +24,6 @@ import com.alipay.sofa.registry.common.model.sessionserver.DataChangeRequest;
  */
 public interface DataChangeRequestHandlerStrategy {
     void doFireChangFetch(DataChangeRequest dataChangeRequestExist);
+
+    void doFireChangFetch(String dataInfoId);
 }
