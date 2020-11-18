@@ -51,7 +51,6 @@ public class TaskEvent {
         UN_PUBLISH_DATA_TASK("UnPublishDataTask"), //
         RENEW_DATUM_TASK("RenewDatumTask"), //
         DATUM_SNAPSHOT_TASK("DatumSnapshotTask"), //
-        NEW_REVISION_TASK("NewRevisionTask"), //
 
         //Session Adapter task
         USER_DATA_ELEMENT_PUSH_TASK("UserDataElementPushTask"), //
