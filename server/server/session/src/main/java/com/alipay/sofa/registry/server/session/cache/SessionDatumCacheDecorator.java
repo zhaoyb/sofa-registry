@@ -54,7 +54,7 @@ public class SessionDatumCacheDecorator {
     @Autowired
     private AppRevisionCacheRegistry appRevisionCacheRegistry;
 
-    private static final String      APP_GROUP  = "SOFA.APP";
+    private static final String      APP_GROUP  = "SOFA_APP";
 
     public Datum getDatumCache(String dataCenter, String dataInfoId) {
         DatumKey datumKey = new DatumKey(dataInfoId, dataCenter);
@@ -80,10 +80,9 @@ public class SessionDatumCacheDecorator {
         NodeManager nodeManager = NodeManagerFactory.getNodeManager(Node.NodeType.META);
         Collection<String> dataCenters = nodeManager.getDataCenters();
         if (dataCenters != null) {
-            Collection<Key> keys = dataCenters.stream().
-                    map(dataCenter -> new Key(Key.KeyType.OBJ, DatumKey.class.getName(),
-                            new DatumKey(dataInfoId, dataCenter))).
-                    collect(Collectors.toList());
+            Collection<Key> keys = dataCenters.stream().map(dataCenter -> new Key(Key.KeyType.OBJ,
+                DatumKey.class.getName(), new DatumKey(dataInfoId, dataCenter)))
+                .collect(Collectors.toList());
 
             Map<Key, Value> values = null;
             try {
@@ -91,11 +90,11 @@ public class SessionDatumCacheDecorator {
             } catch (CacheAccessException e) {
                 // The version is set to 0, so that when session checks the datum versions regularly, it will actively re-query the data.
                 for (String dataCenter : dataCenters) {
-                    boolean result = sessionInterests
-                            .checkAndUpdateInterestVersionZero(dataCenter, dataInfoId);
-                    taskLogger.error(String
-                            .format("error when access cache, so checkAndUpdateInterestVersionZero(return %s): %s",
-                                    result, e.getMessage()), e);
+                    boolean result = sessionInterests.checkAndUpdateInterestVersionZero(dataCenter,
+                        dataInfoId);
+                    taskLogger.error(String.format(
+                        "error when access cache, so checkAndUpdateInterestVersionZero(return %s): %s",
+                        result, e.getMessage()), e);
                 }
             }
 
@@ -116,11 +115,7 @@ public class SessionDatumCacheDecorator {
     public Map<String, Map<String, Datum>> getAppDatumCache(String dataInfoId, String instanceId) {
         Map<String/*datacenter*/, Map<String/*appName*/, Datum>> result = new HashMap<>();
         //get metadata from session cache
-        Map<String/*app*/, Set<String>/*revisions*/> appRevisions = appRevisionCacheRegistry
-            .search(dataInfoId);
-
-        for (Entry<String/*app*/, Set<String>> entry : appRevisions.entrySet()) {
-            String appName = entry.getKey();
+        for (String appName : appRevisionCacheRegistry.getApps(dataInfoId)) {
             String appDataInfoId = DataInfo.toDataInfoId(appName, instanceId, APP_GROUP);
 
             Map<String/*datacenter*/, Datum> appDatum = this.getDatumsCache(appDataInfoId);
@@ -132,11 +127,7 @@ public class SessionDatumCacheDecorator {
             for (Entry<String/*datacenter*/, Datum> datumEntry : appDatum.entrySet()) {
                 String datacenter = datumEntry.getKey();
                 Datum datum = datumEntry.getValue();
-                Map<String, Datum> map = result.get(datacenter);
-                if (null == map) {
-                    map = new HashMap<>();
-                    result.put(datacenter, map);
-                }
+                Map<String, Datum> map = result.computeIfAbsent(datacenter, k -> new HashMap<>());
                 map.put(appName, datum);
             }
         }

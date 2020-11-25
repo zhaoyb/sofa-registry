@@ -16,11 +16,7 @@
  */
 package com.alipay.sofa.registry.server.session.node.service;
 
-import com.alipay.sofa.registry.core.model.AppRevisionRegister;
-import com.alipay.sofa.registry.core.model.AppRevisionKey;
 import com.alipay.sofa.registry.common.model.metaserver.ProvideData;
-
-import java.util.List;
 
 /**
  * @author shangyu.wh

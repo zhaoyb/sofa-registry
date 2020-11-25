@@ -115,27 +115,23 @@ public class DataChangeRequestHandler extends AbstractClientHandler {
             DataInfo dataInfo = DataInfo.valueOf(dataChangeRequest.getDataInfoId());
             refreshMeta(dataChangeRequest.getRevisions());
 
-            if (StringUtils.equals("SOFA.APP", dataInfo.getDataType())) {
+            if (StringUtils.equals("SOFA_APP", dataInfo.getDataType())) {
                 //dataInfoId is app, get relate interfaces dataInfoId from cache
-                Set<String> interfaces = appRevisionCacheRegistry
-                    .searchInterfaces(dataChangeRequest.getDataInfoId());
+                Set<String> interfaces = appRevisionCacheRegistry.getInterfaces(dataChangeRequest
+                    .getDataInfoId());
                 for (String interfaceDataInfoId : interfaces) {
                     DataChangeRequest request = new DataChangeRequest();
                     request.setDataInfoId(interfaceDataInfoId);
                     request.setDataCenter(dataChangeRequest.getDataCenter());
                     request.setVersion(dataChangeRequest.getVersion());
-                    dataChangeRequestHandlerStrategy.doFireChangFetch(request);
-
+                    fireChangFetch(dataChangeRequest);
                 }
             } else {
-                dataChangeRequestHandlerStrategy.doFireChangFetch(dataChangeRequest);
+                fireChangFetch(dataChangeRequest);
             }
             EXCHANGE_LOGGER.info(
                 "Data version has change,and will fetch to update!Request={},URL={}",
                 dataChangeRequest, channel.getRemoteAddress());
-
-            fireChangFetch(dataChangeRequest);
-
         } catch (Exception e) {
             LOGGER.error("DataChange Request error!", e);
             throw new RuntimeException("DataChangeRequest Request error!", e);
@@ -145,7 +141,9 @@ public class DataChangeRequestHandler extends AbstractClientHandler {
     }
 
     private void refreshMeta(Collection<String> revisions) {
-
+        for (String revision : revisions) {
+            appRevisionCacheRegistry.getRevision(revision);
+        }
     }
 
     /**

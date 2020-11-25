@@ -16,7 +16,6 @@
  */
 package com.alipay.sofa.registry.server.session.node.service;
 
-import com.alipay.sofa.registry.core.model.AppRevisionKey;
 import com.alipay.sofa.registry.core.model.AppRevisionRegister;
 
 import java.util.List;
@@ -25,7 +24,7 @@ public interface AppRevisionNodeService {
 
     void register(AppRevisionRegister appRevision);
 
-    List<AppRevisionRegister> fetchMulti(List<AppRevisionKey> keys);
+    List<AppRevisionRegister> fetchMulti(List<String> keys);
 
-    List<AppRevisionKey> checkRevisions(String keysDigest);
+    List<String> checkRevisions(String keysDigest);
 }

@@ -29,6 +29,7 @@ import com.alipay.sofa.registry.server.session.cache.*;
 import com.alipay.sofa.registry.server.session.connections.ConnectionsService;
 import com.alipay.sofa.registry.server.session.node.service.*;
 import com.alipay.sofa.registry.server.session.predicate.RevisionPredicate;
+import com.alipay.sofa.registry.server.session.push.FirePushService;
 import com.alipay.sofa.registry.server.session.remoting.handler.*;
 import com.alipay.sofa.registry.server.session.resource.*;
 import com.alipay.sofa.registry.server.session.strategy.*;
@@ -410,6 +411,12 @@ public class SessionServerConfiguration {
         @Bean
         public AppRevisionNodeService appRevisionNodeService() {
             return new AppRevisionNodeServiceImpl();
+        }
+
+        @Bean
+        @ConditionalOnMissingBean
+        public FirePushService firePushService() {
+            return new FirePushService();
         }
     }
 

@@ -111,9 +111,7 @@ public class AppInterfaceAssembleService implements AssembleService {
 
         if (!CollectionUtils.isEmpty(appDatum)) {
             for (Datum app : appDatum.values()) {
-                if (app.getVersion() > datum.getVersion()) {
-                    datum.setVersion(app.getVersion());
-                }
+                datum.setVersion(Math.max(app.getVersion(), datum.getVersion()));
                 for (Entry<String, Publisher> publisherEntry : app.getPubMap().entrySet()) {
                     if (!(publisherEntry instanceof AppPublisher)) {
                         continue;

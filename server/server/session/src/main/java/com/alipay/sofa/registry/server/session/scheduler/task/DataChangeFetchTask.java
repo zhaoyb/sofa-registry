@@ -63,7 +63,7 @@ public class DataChangeFetchTask extends AbstractSessionTask {
 
     private final SessionServerConfig        sessionServerConfig;
 
-    private static final String              APP_GROUP = "SOFA.APP";
+    private static final String              APP_GROUP = "SOFA_APP";
 
     /**
      * trigger task com.alipay.sofa.registry.server.meta.listener process
@@ -107,26 +107,19 @@ public class DataChangeFetchTask extends AbstractSessionTask {
         DataInfo dataInfo = DataInfo.valueOf(dataChangeRequest.getDataInfoId());
         Datum datum = sessionDatumCacheDecorator.getDatumCache(dataChangeRequest.getDataCenter(),
             dataChangeRequest.getDataInfoId());
-        if (StringUtils.equals(APP_GROUP, dataInfo.getDataType())) {
-
-            refreshMeta(datum.getPubMap().values());
-
-            //dataInfoId is app, get relate interfaces dataInfoId from cache
-            Set<String> interfaces = appRevisionCacheRegistry.searchInterfaces(dataChangeRequest
-                .getDataInfoId());
-            for (String interfaceDataInfoId : interfaces) {
-                doExecute(interfaceDataInfoId);
-            }
-        }
+        // FIXME delete
+        //        if (StringUtils.equals(APP_GROUP, dataInfo.getDataType())) {
+        //
+        //            refreshMeta(datum.getPubMap().values());
+        //
+        //            //dataInfoId is app, get relate interfaces dataInfoId from cache
+        //            Set<String> interfaces = appRevisionCacheRegistry.getInterfaces(dataChangeRequest
+        //                .getDataInfoId());
+        //            for (String interfaceDataInfoId : interfaces) {
+        //                doExecute(interfaceDataInfoId);
+        //            }
+        //        }
         doExecute(dataChangeRequest.getDataInfoId());
-    }
-
-    private void refreshMeta(Collection<Publisher> publishers) {
-        for (Publisher publisher : publishers) {
-            if (!(publisher instanceof AppPublisher)) {
-
-            }
-        }
     }
 
     private void doExecute(String dataInfoId) {
