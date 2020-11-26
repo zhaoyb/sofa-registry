@@ -89,6 +89,7 @@ public class DefaultSessionRegistryStrategy implements SessionRegistryStrategy {
     }
 
     private void fireDataChangeCloudTask(String dataInfoId) {
+
         //trigger fetch data for subscriber,and push to client node
         TaskEvent taskEvent = new TaskEvent(dataInfoId,
             TaskEvent.TaskType.DATA_CHANGE_FETCH_CLOUD_TASK);
