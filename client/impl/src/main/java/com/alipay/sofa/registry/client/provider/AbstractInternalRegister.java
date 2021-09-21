@@ -98,6 +98,7 @@ public abstract class AbstractInternalRegister implements Register {
     void waitToSync() {
         writeLock.lock();
         try {
+            // 设置
             this.registered = false;
             this.requestId = UUID.randomUUID().toString();
         } finally {

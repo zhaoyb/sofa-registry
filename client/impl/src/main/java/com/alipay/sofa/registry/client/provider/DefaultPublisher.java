@@ -65,11 +65,13 @@ public class DefaultPublisher extends AbstractInternalRegister implements Publis
      */
     @Override
     public void republish(String... data) {
+        // 发布已经被服务端拒绝
         if (isRefused()) {
             throw new IllegalStateException(
                 "Publisher is refused by server. Try to check your configuration.");
         }
 
+        // 是否可用
         if (!isEnabled()) {
             throw new IllegalStateException("Unregistered publisher can not be reused.");
         }
@@ -79,8 +81,9 @@ public class DefaultPublisher extends AbstractInternalRegister implements Publis
             if (null != data) {
                 this.dataList = Arrays.asList(data);
             }
-
+            // 发布版本 +1 ，
             this.getPubVersion().incrementAndGet();
+            // 设置时间戳
             this.setTimestamp(System.currentTimeMillis());
             this.waitToSync();
         } finally {

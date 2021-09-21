@@ -77,6 +77,7 @@ public class RaftClientManager {
 
     private String getServerConfig() {
         String ret = "";
+        // 获取所有 meta IP
         Set<String> ips = getMetaIp();
         if (ips != null && !ips.isEmpty()) {
             ret = ips.stream().map(ip -> ip + ":" + ValueConstants.RAFT_SERVER_PORT)
@@ -93,10 +94,13 @@ public class RaftClientManager {
             return metaIps;
         }
         metaIps = new HashSet<>();
+        // 获取所有的元数据节点
         Map<String, Collection<String>> metaMap = commonConfig.getMetaNode();
         if (metaMap != null && !metaMap.isEmpty()) {
+            // 本地数据中心
             String localDataCenter = sessionServerConfig.getSessionServerDataCenter();
             if (localDataCenter != null && !localDataCenter.isEmpty()) {
+                // 获取数据中心对应的元数据
                 Collection<String> metas = metaMap.get(localDataCenter);
                 if (metas != null && !metas.isEmpty()) {
                     metas.forEach(domain -> {

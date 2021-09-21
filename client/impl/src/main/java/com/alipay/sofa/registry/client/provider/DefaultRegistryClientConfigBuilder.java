@@ -22,31 +22,77 @@ import static com.alipay.sofa.registry.client.constants.ValueConstants.DEFAULT_Z
 /**
  * The type Default registry client config builder.
  *
+ * 默认的客户端实例
+ *
+ *
  * @author zhuoyu.sjw
  * @version $Id : DefaultRegistryClientConfig.java, v 0.1 2017-11-23 20:12 zhuoyu.sjw Exp $$
  */
 public class DefaultRegistryClientConfigBuilder {
-    private String  env;
-    private String  instanceId;
-    private String  zone                      = DEFAULT_ZONE;
-    private String  registryEndpoint;
-    private int     registryEndpointPort      = 9603;
-    private String  dataCenter                = DEFAULT_DATA_CENTER;
-    private String  appName;
-    private int     connectTimeout            = 3000;
-    private int     socketTimeout             = 3000;
-    private int     invokeTimeout             = 1000;
-    private int     recheckInterval           = 500;
-    private int     observerThreadCoreSize    = 5;
-    private int     observerThreadMaxSize     = 10;
-    private int     observerThreadQueueLength = 1000;
-    private int     observerCallbackTimeout   = 5000;
-    private int     syncConfigRetryInterval   = 30000;
-    private String  accessKey;
-    private String  secretKey;
-    private String  algorithm                 = "HmacSHA256";
-    private long    authCacheInterval         = 5 * 60 * 1000;
-    private boolean eventBusEnable            = true;
+    private String env;
+    /**
+     * 实例 Id  数据唯一标识由dataId+group+instanceId
+     */
+    private String instanceId;
+    /**
+     * 单元化所属 zone,  默认值, default_zone
+     */
+    private String zone = DEFAULT_ZONE;
+    /**
+     * 服务端任一 session 节点地址
+     */
+    private String registryEndpoint;
+    /**
+     * Session 节点配置的 session.server.httpServerPort 端口值，默认值 9603。
+     */
+    private int registryEndpointPort = 9603;
+    /**
+     * 数据中心，默认值 DefaultDataCenter。
+     */
+    private String dataCenter = DEFAULT_DATA_CENTER;
+    /**
+     * 应用名
+     */
+    private String appName;
+    /**
+     * 与服务端建立连接超时时间，默认值 3000ms。
+     */
+    private int connectTimeout = 3000;
+
+    /**
+     * 访问服务端 REST 接口超时时间，默认值 3000ms。
+     */
+    private int socketTimeout = 3000;
+    /**
+     * 调用服务端服务超时时间，默认值 1000ms。
+     */
+    private int invokeTimeout = 1000;
+
+    /**
+     * 检测任务队列间隔时间，默认值 500ms。
+     */
+    private int recheckInterval = 500;
+
+    /**
+     * 处理服务端推送数据线程池核心线程大小，默认值 5。
+     */
+    private int observerThreadCoreSize = 5;
+
+    /**
+     * 处理服务端推送数据线程池最大线程大小，默认值 10。
+     */
+    private int observerThreadMaxSize = 10;
+    /**
+     * 处理服务端推送数据线程池队列大小，默认值 1000。
+     */
+    private int observerThreadQueueLength = 1000;
+    private int observerCallbackTimeout = 5000;
+    private int syncConfigRetryInterval = 30000;
+    private String accessKey;
+    private String secretKey;
+    private String algorithm = "HmacSHA256";
+    private long authCacheInterval = 5 * 60 * 1000;
+    private boolean eventBusEnable = true;
 
     /**
      * Start default registry client config builder.
@@ -60,7 +106,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets env.
      *
-     * @param env the env   
+     * @param env the env
      * @return the env
      */
     public DefaultRegistryClientConfigBuilder setEnv(String env) {
@@ -71,7 +117,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets instance id.
      *
-     * @param instanceId the instance id   
+     * @param instanceId the instance id
      * @return the instance id
      */
     public DefaultRegistryClientConfigBuilder setInstanceId(String instanceId) {
@@ -82,7 +128,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets zone.
      *
-     * @param zone the zone  
+     * @param zone the zone
      * @return the zone
      */
     public DefaultRegistryClientConfigBuilder setZone(String zone) {
@@ -93,7 +139,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets registry endpoint.
      *
-     * @param registryEndpoint the registry endpoint   
+     * @param registryEndpoint the registry endpoint
      * @return the registry endpoint
      */
     public DefaultRegistryClientConfigBuilder setRegistryEndpoint(String registryEndpoint) {
@@ -104,7 +150,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets registry endpoint port.
      *
-     * @param registryEndpointPort the registry endpoint port   
+     * @param registryEndpointPort the registry endpoint port
      * @return the registry endpoint port
      */
     public DefaultRegistryClientConfigBuilder setRegistryEndpointPort(int registryEndpointPort) {
@@ -115,7 +161,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets data center.
      *
-     * @param dataCenter the data center   
+     * @param dataCenter the data center
      * @return the data center
      */
     public DefaultRegistryClientConfigBuilder setDataCenter(String dataCenter) {
@@ -126,7 +172,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets app name.
      *
-     * @param appName the app name   
+     * @param appName the app name
      * @return the app name
      */
     public DefaultRegistryClientConfigBuilder setAppName(String appName) {
@@ -177,7 +223,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets connect timeout.
      *
-     * @param connectTimeout the connect timeout   
+     * @param connectTimeout the connect timeout
      * @return the connect timeout
      */
     public DefaultRegistryClientConfigBuilder setConnectTimeout(int connectTimeout) {
@@ -188,7 +234,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets socket timeout.
      *
-     * @param socketTimeout the socket timeout   
+     * @param socketTimeout the socket timeout
      * @return the socket timeout
      */
     public DefaultRegistryClientConfigBuilder setSocketTimeout(int socketTimeout) {
@@ -199,7 +245,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets invoke timeout.
      *
-     * @param invokeTimeout the invoke timeout   
+     * @param invokeTimeout the invoke timeout
      * @return the invoke timeout
      */
     public DefaultRegistryClientConfigBuilder setInvokeTimeout(int invokeTimeout) {
@@ -210,7 +256,7 @@ public class DefaultRegistryClientConfigBuilder {
     /**
      * Sets recheck interval.
      *
-     * @param recheckInterval the recheck interval   
+     * @param recheckInterval the recheck interval
      * @return the recheck interval
      */
     public DefaultRegistryClientConfigBuilder setRecheckInterval(int recheckInterval) {
@@ -285,9 +331,9 @@ public class DefaultRegistryClientConfigBuilder {
      */
     public DefaultRegistryClientConfig build() {
         return new DefaultRegistryClientConfig(env, instanceId, zone, registryEndpoint,
-            registryEndpointPort, dataCenter, appName, connectTimeout, socketTimeout,
-            invokeTimeout, recheckInterval, observerThreadCoreSize, observerThreadMaxSize,
-            observerThreadQueueLength, observerCallbackTimeout, syncConfigRetryInterval, accessKey,
-            secretKey, algorithm, authCacheInterval, eventBusEnable);
+                                               registryEndpointPort, dataCenter, appName, connectTimeout, socketTimeout,
+                                               invokeTimeout, recheckInterval, observerThreadCoreSize, observerThreadMaxSize,
+                                               observerThreadQueueLength, observerCallbackTimeout, syncConfigRetryInterval, accessKey,
+                                               secretKey, algorithm, authCacheInterval, eventBusEnable);
     }
 }

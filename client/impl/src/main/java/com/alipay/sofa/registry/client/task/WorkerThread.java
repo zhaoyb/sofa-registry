@@ -71,8 +71,10 @@ public class WorkerThread extends AbstractWorkerThread {
     @Override
     public void schedule(TaskEvent event) {
         if (inited.compareAndSet(false, true)) {
+            // 调用线程 start
             this.start();
         }
+        // 放入到队列中
         requestQueue.put(event);
         signal();
     }
@@ -92,26 +94,37 @@ public class WorkerThread extends AbstractWorkerThread {
 
     /**
      * Handle.
+     *
+     *
+     * 线程处理
      */
     @Override
     public void handle() {
         //noinspection InfiniteLoopStatement
+        // 循环处理
         while (true) {
             try {
                 // check connection status, try to reconnect to the server when connection lose
+                // 确保连接正常
                 client.ensureConnected();
 
+                // 如果为空，则继续
                 if (requestQueue.isEmpty()) {
                     await(config.getRecheckInterval());
                     continue;
                 }
 
+                // 获取时间
                 Iterator<TaskEvent> lt = requestQueue.iterator();
 
                 while (lt.hasNext()) {
+                    // 确保连接正常
                     client.ensureConnected();
+                    // 拿到事件
                     TaskEvent ev = lt.next();
+                    // 从列表中移除
                     lt.remove();
+
                     int sendCount = ev.incSendCount();
 
                     // Resent needs delay when task event is not the first time to send.
@@ -123,6 +136,7 @@ public class WorkerThread extends AbstractWorkerThread {
                 }
 
                 // Cleaning completed task, it will take more time when the registration number is large.
+                // 清空已经完成的事件
                 requestQueue.cleanCompletedTasks();
             } catch (Throwable e) {
                 LOGGER.error("[send] handle data error!", e);
@@ -136,6 +150,7 @@ public class WorkerThread extends AbstractWorkerThread {
         }
 
         try {
+            // 设置 事件 触发时间， 也即是处理事件
             event.setTriggerTime(System.currentTimeMillis());
             Register register = event.getSource();
 
@@ -156,19 +171,24 @@ public class WorkerThread extends AbstractWorkerThread {
 
             Object request = syncTask.getRequest();
 
+            // 同步调用， 调用到服务端
             Object result = client.invokeSync(request);
 
+            // 返回结果类型判断
             if (!(result instanceof RegisterResponse)) {
                 LOGGER.warn("[register] result type is wrong, {}", result);
                 return;
             }
 
+            // 返回结果类型转换
             RegisterResponse response = (RegisterResponse) result;
+            // 返回失败
             if (!response.isSuccess()) {
                 LOGGER.info("[register] register to server failed, {}, {}", request, response);
                 return;
             }
 
+            // 设置 已完成
             boolean syncOK = abstractInternalRegister.syncOK(requestId, response.getVersion(),
                 response.isRefused());
             if (!syncOK) {

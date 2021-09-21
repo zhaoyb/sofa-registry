@@ -137,6 +137,12 @@ import com.alipay.sofa.registry.util.PropertySplitter;
 
 /**
  *
+ *
+ * 配置了 @configuration， 并引入了SessionServerInitializer
+ * 所以这个类会被 spring 管理
+ *
+ *
+ *
  * @author shangyu.wh
  * @version $Id: SessionServerConfiguration.java, v 0.1 2017-11-14 11:39 synex Exp $
  */

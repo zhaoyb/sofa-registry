@@ -24,6 +24,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  *
+ * session 依托 spring boot 启动
+ *
  * @author zhuoyu.sjw
  * @version $Id: SessionApplication.java, v 0.1 2017-11-13 20:19 zhuoyu.sjw Exp $$
  */

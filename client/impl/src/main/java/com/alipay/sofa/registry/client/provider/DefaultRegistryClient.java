@@ -19,13 +19,7 @@ package com.alipay.sofa.registry.client.provider;
 import com.alipay.remoting.ConnectionEventProcessor;
 import com.alipay.remoting.ConnectionEventType;
 import com.alipay.remoting.rpc.protocol.UserProcessor;
-import com.alipay.sofa.registry.client.api.Configurator;
-import com.alipay.sofa.registry.client.api.EventBus;
-import com.alipay.sofa.registry.client.api.Publisher;
-import com.alipay.sofa.registry.client.api.Register;
-import com.alipay.sofa.registry.client.api.RegistryClient;
-import com.alipay.sofa.registry.client.api.RegistryClientConfig;
-import com.alipay.sofa.registry.client.api.Subscriber;
+import com.alipay.sofa.registry.client.api.*;
 import com.alipay.sofa.registry.client.api.exception.DuplicateException;
 import com.alipay.sofa.registry.client.api.exception.RegistryClientException;
 import com.alipay.sofa.registry.client.api.model.RegistryType;
@@ -39,12 +33,7 @@ import com.alipay.sofa.registry.client.event.DefaultEventBus;
 import com.alipay.sofa.registry.client.event.LookoutSubscriber;
 import com.alipay.sofa.registry.client.event.SubscriberProcessEvent;
 import com.alipay.sofa.registry.client.log.LoggerFactory;
-import com.alipay.sofa.registry.client.remoting.ClientConnection;
-import com.alipay.sofa.registry.client.remoting.ClientConnectionCloseEventProcessor;
-import com.alipay.sofa.registry.client.remoting.ClientConnectionOpenEventProcessor;
-import com.alipay.sofa.registry.client.remoting.ReceivedConfigDataProcessor;
-import com.alipay.sofa.registry.client.remoting.ReceivedDataProcessor;
-import com.alipay.sofa.registry.client.remoting.ServerManager;
+import com.alipay.sofa.registry.client.remoting.*;
 import com.alipay.sofa.registry.client.task.ObserverHandler;
 import com.alipay.sofa.registry.client.task.SyncConfigThread;
 import com.alipay.sofa.registry.client.task.TaskEvent;
@@ -54,11 +43,7 @@ import com.alipay.sofa.registry.core.model.ReceivedConfigData;
 import com.alipay.sofa.registry.core.model.ReceivedData;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -67,44 +52,47 @@ import static com.alipay.sofa.registry.client.constants.ValueConstants.DEFAULT_G
 
 /**
  * The type Default registry client.
+ *
  * @author zhuoyu.sjw
  * @version $Id : DefaultRegistryClient.java, v 0.1 2017-11-23 20:07 zhuoyu.sjw Exp $$
  */
 public class DefaultRegistryClient implements RegistryClient {
 
-    /** LOGGER */
-    private static final Logger                                   LOGGER = LoggerFactory
-                                                                             .getLogger(DefaultRegistryClient.class);
+    /**
+     * LOGGER
+     */
+    private static final Logger LOGGER = LoggerFactory
+            .getLogger(DefaultRegistryClient.class);
 
-    private RegistryClientConfig                                  registryClientConfig;
+    private RegistryClientConfig registryClientConfig;
 
-    private RegisterCache                                         registerCache;
+    private RegisterCache registerCache;
 
-    private ServerManager                                         serverManager;
+    private ServerManager serverManager;
 
-    private WorkerThread                                          workerThread;
+    private WorkerThread workerThread;
 
-    private ClientConnection                                      client;
+    private ClientConnection client;
 
-    private Map<Class<?>, UserProcessor>                          userProcessorMap;
+    private Map<Class<?>, UserProcessor> userProcessorMap;
 
-    private Map<ConnectionEventType, ConnectionEventProcessor>    connectionEventProcessorMap;
+    private Map<ConnectionEventType, ConnectionEventProcessor> connectionEventProcessorMap;
 
-    private ConcurrentMap<PublisherRegistration, Publisher>       registrationPublisherMap;
+    private ConcurrentMap<PublisherRegistration, Publisher> registrationPublisherMap;
 
-    private ConcurrentMap<SubscriberRegistration, Subscriber>     registrationSubscriberMap;
+    private ConcurrentMap<SubscriberRegistration, Subscriber> registrationSubscriberMap;
 
     private ConcurrentMap<ConfiguratorRegistration, Configurator> registrationConfiguratorMap;
 
-    private ObserverHandler                                       observerHandler;
+    private ObserverHandler observerHandler;
 
-    private AuthManager                                           authManager;
+    private AuthManager authManager;
 
-    private EventBus                                              eventBus;
+    private EventBus eventBus;
 
-    private LookoutSubscriber                                     lookoutSubscriber;
+    private LookoutSubscriber lookoutSubscriber;
 
-    private AtomicBoolean                                         init   = new AtomicBoolean(false);
+    private AtomicBoolean init = new AtomicBoolean(false);
 
     /**
      * Instantiates a new Default registry client.
@@ -120,28 +108,34 @@ public class DefaultRegistryClient implements RegistryClient {
         this.registrationConfiguratorMap = new ConcurrentHashMap<ConfiguratorRegistration, Configurator>();
     }
 
+    /**
+     *
+     * copy 配置
+     * @param registryClientConfig
+     * @return
+     */
     private DefaultRegistryClientConfig cloneConfig(RegistryClientConfig registryClientConfig) {
         DefaultRegistryClientConfig cloneConfig = null;
         DefaultRegistryClientConfigBuilder builder = DefaultRegistryClientConfigBuilder.start();
         if (null != registryClientConfig) {
             cloneConfig = builder.setEnv(registryClientConfig.getEnv())
-                .setAppName(registryClientConfig.getAppName())
-                .setInstanceId(registryClientConfig.getInstanceId())
-                .setDataCenter(registryClientConfig.getDataCenter())
-                .setZone(registryClientConfig.getZone())
-                .setRegistryEndpoint(registryClientConfig.getRegistryEndpoint())
-                .setRegistryEndpointPort(registryClientConfig.getRegistryEndpointPort())
-                .setConnectTimeout(registryClientConfig.getConnectTimeout())
-                .setSocketTimeout(registryClientConfig.getSocketTimeout())
-                .setInvokeTimeout(registryClientConfig.getInvokeTimeout())
-                .setRecheckInterval(registryClientConfig.getRecheckInterval())
-                .setObserverThreadCoreSize(registryClientConfig.getObserverThreadCoreSize())
-                .setObserverThreadMaxSize(registryClientConfig.getObserverThreadMaxSize())
-                .setObserverThreadQueueLength(registryClientConfig.getObserverThreadQueueLength())
-                .setObserverCallbackTimeout(registryClientConfig.getObserverCallbackTimeout())
-                .setSyncConfigRetryInterval(registryClientConfig.getSyncConfigRetryInterval())
-                .setAccessKey(registryClientConfig.getAccessKey())
-                .setSecretKey(registryClientConfig.getSecretKey()).build();
+                                 .setAppName(registryClientConfig.getAppName())
+                                 .setInstanceId(registryClientConfig.getInstanceId())
+                                 .setDataCenter(registryClientConfig.getDataCenter())
+                                 .setZone(registryClientConfig.getZone())
+                                 .setRegistryEndpoint(registryClientConfig.getRegistryEndpoint())
+                                 .setRegistryEndpointPort(registryClientConfig.getRegistryEndpointPort())
+                                 .setConnectTimeout(registryClientConfig.getConnectTimeout())
+                                 .setSocketTimeout(registryClientConfig.getSocketTimeout())
+                                 .setInvokeTimeout(registryClientConfig.getInvokeTimeout())
+                                 .setRecheckInterval(registryClientConfig.getRecheckInterval())
+                                 .setObserverThreadCoreSize(registryClientConfig.getObserverThreadCoreSize())
+                                 .setObserverThreadMaxSize(registryClientConfig.getObserverThreadMaxSize())
+                                 .setObserverThreadQueueLength(registryClientConfig.getObserverThreadQueueLength())
+                                 .setObserverCallbackTimeout(registryClientConfig.getObserverCallbackTimeout())
+                                 .setSyncConfigRetryInterval(registryClientConfig.getSyncConfigRetryInterval())
+                                 .setAccessKey(registryClientConfig.getAccessKey())
+                                 .setSecretKey(registryClientConfig.getSecretKey()).build();
         }
         return cloneConfig;
     }
@@ -194,7 +188,7 @@ public class DefaultRegistryClient implements RegistryClient {
             userProcessor = userProcessorMap.get(ReceivedConfigData.class);
             if (null == userProcessor) {
                 userProcessorList.add(new ReceivedConfigDataProcessor(registerCache,
-                    observerHandler));
+                                                                      observerHandler));
             }
             userProcessorList.addAll(userProcessorMap.values());
         }
@@ -202,22 +196,22 @@ public class DefaultRegistryClient implements RegistryClient {
         // init connection event processor
         if (null == connectionEventProcessorMap) {
             connectionEventProcessorMap = new HashMap<ConnectionEventType, ConnectionEventProcessor>(
-                ConnectionEventType.values().length);
+                    ConnectionEventType.values().length);
         }
         if (null == connectionEventProcessorMap.get(ConnectionEventType.CLOSE)) {
             ClientConnectionCloseEventProcessor connectionCloseEventProcessor = new ClientConnectionCloseEventProcessor();
             connectionEventProcessorMap.put(ConnectionEventType.CLOSE,
-                connectionCloseEventProcessor);
+                                            connectionCloseEventProcessor);
         }
         if (null == connectionEventProcessorMap.get(ConnectionEventType.CONNECT)) {
             ClientConnectionOpenEventProcessor connectionOpenEventProcessor = new ClientConnectionOpenEventProcessor();
             connectionEventProcessorMap.put(ConnectionEventType.CONNECT,
-                connectionOpenEventProcessor);
+                                            connectionOpenEventProcessor);
         }
 
         // init client connection and register worker
         client = new ClientConnection(serverManager, userProcessorList,
-            connectionEventProcessorMap, registerCache, registryClientConfig);
+                                      connectionEventProcessorMap, registerCache, registryClientConfig);
 
         workerThread = new WorkerThread(client, registryClientConfig, registerCache);
         client.setWorker(workerThread);
@@ -271,18 +265,18 @@ public class DefaultRegistryClient implements RegistryClient {
         publisher.republish(data);
 
         LOGGER.info("[api] Regist publisher success, dataId: {}, group: {}, registerId: {}",
-            publisher.getDataId(), publisher.getGroup(), publisher.getRegistId());
+                    publisher.getDataId(), publisher.getGroup(), publisher.getRegistId());
 
         return publisher;
     }
 
     private void throwDuplicateException(PublisherRegistration registration, Publisher publisher) {
         LOGGER.info("[api] Publisher already exists, dataId: {}, group: {}, registerId: {}",
-            publisher.getDataId(), publisher.getGroup(), publisher.getRegistId());
+                    publisher.getDataId(), publisher.getGroup(), publisher.getRegistId());
 
         throw new DuplicateException("Duplicate Publisher registration. (dataId: "
-                                     + registration.getDataId() + ", group: "
-                                     + registration.getGroup() + ")");
+                                             + registration.getDataId() + ", group: "
+                                             + registration.getGroup() + ")");
     }
 
     /**
@@ -328,9 +322,9 @@ public class DefaultRegistryClient implements RegistryClient {
         addRegisterTask(subscriber);
 
         LOGGER.info(
-            "[api] Regist subscriber success, dataId: {}, group: {}, scope: {}, registerId: {}",
-            subscriber.getDataId(), subscriber.getGroup(), subscriber.getScopeEnum(),
-            subscriber.getRegistId());
+                "[api] Regist subscriber success, dataId: {}, group: {}, scope: {}, registerId: {}",
+                subscriber.getDataId(), subscriber.getGroup(), subscriber.getScopeEnum(),
+                subscriber.getRegistId());
 
         return subscriber;
     }
@@ -370,7 +364,7 @@ public class DefaultRegistryClient implements RegistryClient {
         ((DefaultConfigurator) configurator).setAuthManager(authManager);
 
         Configurator oldConfigurator = registrationConfiguratorMap.putIfAbsent(registration,
-            configurator);
+                                                                               configurator);
         if (null != oldConfigurator) {
             throwDuplicateException(configurator);
         }
@@ -379,16 +373,16 @@ public class DefaultRegistryClient implements RegistryClient {
         addRegisterTask(configurator);
 
         LOGGER.info("[api] Regist configurator success, dataId: {}, registerId: {}",
-            configurator.getDataId(), configurator.getRegistId());
+                    configurator.getDataId(), configurator.getRegistId());
 
         return configurator;
     }
 
     private void throwDuplicateException(Configurator configurator) {
         LOGGER.info("[api] Configurator already exists, dataId: {}, registerId: {}",
-            configurator.getDataObserver(), configurator.getRegistId());
+                    configurator.getDataObserver(), configurator.getRegistId());
         throw new DuplicateException("Duplicate configurator registration. (dataId: "
-                                     + configurator.getDataId() + " )");
+                                             + configurator.getDataId() + " )");
     }
 
     /**
@@ -441,18 +435,18 @@ public class DefaultRegistryClient implements RegistryClient {
 
     private void throwDuplicateException(SubscriberRegistration registration, Subscriber subscriber) {
         LOGGER.info(
-            "[api] Subscriber already exists, dataId: {}, group: {}, scope: {}, registerId: {}",
-            subscriber.getDataId(), subscriber.getGroup(), subscriber.getScopeEnum(),
-            subscriber.getRegistId());
+                "[api] Subscriber already exists, dataId: {}, group: {}, scope: {}, registerId: {}",
+                subscriber.getDataId(), subscriber.getGroup(), subscriber.getScopeEnum(),
+                subscriber.getRegistId());
         throw new DuplicateException("Duplicate subscriber registration. (dataId: "
-                                     + registration.getDataId() + ", group: "
-                                     + registration.getGroup() + ")");
+                                             + registration.getDataId() + ", group: "
+                                             + registration.getGroup() + ")");
     }
 
     /**
      * Add register task.
      *
-     * @param register the register 
+     * @param register the register
      * @throws RegistryClientException the registry client exception
      */
     private void addRegisterTask(Register register) throws RegistryClientException {
@@ -566,7 +560,7 @@ public class DefaultRegistryClient implements RegistryClient {
                     for (Publisher publisher : allPublishers) {
                         try {
                             if (null != publisher
-                                && !((AbstractInternalRegister) publisher).isDone()) {
+                                    && !((AbstractInternalRegister) publisher).isDone()) {
                                 addRegisterTask(publisher);
                             }
                         } catch (Exception e) {
@@ -579,7 +573,7 @@ public class DefaultRegistryClient implements RegistryClient {
                     for (Subscriber subscriber : allSubscribers) {
                         try {
                             if (null != subscriber
-                                && !((AbstractInternalRegister) subscriber).isDone()) {
+                                    && !((AbstractInternalRegister) subscriber).isDone()) {
                                 addRegisterTask(subscriber);
                             }
                         } catch (Exception e) {
@@ -592,7 +586,7 @@ public class DefaultRegistryClient implements RegistryClient {
                     for (Configurator configurator : allConfigurators) {
                         try {
                             if (null != configurator
-                                && !((AbstractInternalRegister) configurator).isDone()) {
+                                    && !((AbstractInternalRegister) configurator).isDone()) {
                                 addRegisterTask(configurator);
                             }
                         } catch (Exception e) {

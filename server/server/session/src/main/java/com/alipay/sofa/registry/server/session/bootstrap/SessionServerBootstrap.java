@@ -16,20 +16,6 @@
  */
 package com.alipay.sofa.registry.server.session.bootstrap;
 
-import java.lang.annotation.Annotation;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.annotation.Resource;
-import javax.ws.rs.Path;
-import javax.ws.rs.ext.Provider;
-
-import org.glassfish.jersey.server.ResourceConfig;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-
 import com.alipay.sofa.registry.common.model.constants.ValueConstants;
 import com.alipay.sofa.registry.common.model.metaserver.FetchProvideDataRequest;
 import com.alipay.sofa.registry.common.model.metaserver.NodeChangeResult;
@@ -53,79 +39,97 @@ import com.alipay.sofa.registry.server.session.provideData.ProvideDataProcessor;
 import com.alipay.sofa.registry.server.session.remoting.handler.AbstractServerHandler;
 import com.alipay.sofa.registry.server.session.scheduler.ExecutorManager;
 import com.alipay.sofa.registry.task.batcher.TaskDispatchers;
+import org.glassfish.jersey.server.ResourceConfig;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+
+import javax.annotation.Resource;
+import javax.ws.rs.Path;
+import javax.ws.rs.ext.Provider;
+import java.lang.annotation.Annotation;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * The type Session server bootstrap.
+ *
  * @author shangyu.wh
  * @version $Id : SessionServerBootstrap.java, v 0.1 2017-11-14 11:44 synex Exp $
  */
 public class SessionServerBootstrap {
 
-    private static final Logger               LOGGER         = LoggerFactory
-                                                                 .getLogger(SessionServerBootstrap.class);
+    private static final Logger LOGGER = LoggerFactory
+            .getLogger(SessionServerBootstrap.class);
 
     @Autowired
-    private SessionServerConfig               sessionServerConfig;
+    private SessionServerConfig sessionServerConfig;
 
     @Autowired
-    private Exchange                          boltExchange;
+    private Exchange boltExchange;
 
     @Autowired
-    private Exchange                          jerseyExchange;
+    private Exchange jerseyExchange;
 
     @Autowired
-    private ExecutorManager                   executorManager;
+    private ExecutorManager executorManager;
 
     @Resource(name = "serverHandlers")
     private Collection<AbstractServerHandler> serverHandlers;
 
     @Autowired
-    private NodeManager                       metaNodeManager;
+    private NodeManager metaNodeManager;
 
     @Autowired
-    protected NodeExchanger                   metaNodeExchanger;
+    protected NodeExchanger metaNodeExchanger;
 
     @Autowired
-    private NodeExchanger                     dataNodeExchanger;
+    private NodeExchanger dataNodeExchanger;
 
     @Autowired
-    private ResourceConfig                    jerseyResourceConfig;
+    private ResourceConfig jerseyResourceConfig;
 
     @Autowired
-    private ApplicationContext                applicationContext;
+    private ApplicationContext applicationContext;
 
     @Autowired
-    private RaftClientManager                 raftClientManager;
+    private RaftClientManager raftClientManager;
 
     @Autowired
-    private BlacklistManager                  blacklistManager;
+    private BlacklistManager blacklistManager;
 
     @Autowired
-    private ProvideDataProcessor              provideDataProcessorManager;
+    private ProvideDataProcessor provideDataProcessorManager;
 
-    private Server                            server;
+    private Server server;
 
-    private Server                            httpServer;
+    private Server httpServer;
 
-    private Client                            metaClient;
+    private Client metaClient;
 
-    private AtomicBoolean                     metaStart      = new AtomicBoolean(false);
+    private AtomicBoolean metaStart = new AtomicBoolean(false);
 
-    private AtomicBoolean                     schedulerStart = new AtomicBoolean(false);
+    private AtomicBoolean schedulerStart = new AtomicBoolean(false);
 
-    private AtomicBoolean                     httpStart      = new AtomicBoolean(false);
+    private AtomicBoolean httpStart = new AtomicBoolean(false);
 
-    private AtomicBoolean                     serverStart    = new AtomicBoolean(false);
+    private AtomicBoolean serverStart = new AtomicBoolean(false);
 
-    private AtomicBoolean                     dataStart      = new AtomicBoolean(false);
+    private AtomicBoolean dataStart = new AtomicBoolean(false);
 
     /**
+     *
+     * 执行 session服务 的初始化
+     *
+     *
      * Do initialized.
      */
     public void start() {
         try {
             LOGGER.info("the configuration items are as follows: " + sessionServerConfig.toString());
 
+            // 打印日志，打印进程 Id
             initEnvironment();
 
             startRaftClient();
@@ -172,9 +176,9 @@ public class SessionServerBootstrap {
 
     private void initEnvironment() {
         LOGGER.info("Session server Environment: DataCenter {},Region {},ProcessId {}",
-            sessionServerConfig.getSessionServerDataCenter(),
-            sessionServerConfig.getSessionServerRegion(),
-            SessionProcessIdGenerator.getSessionProcessId());
+                    sessionServerConfig.getSessionServerDataCenter(),
+                    sessionServerConfig.getSessionServerRegion(),
+                    SessionProcessIdGenerator.getSessionProcessId());
     }
 
     private void startScheduler() {
@@ -195,15 +199,15 @@ public class SessionServerBootstrap {
         try {
             if (serverStart.compareAndSet(false, true)) {
                 server = boltExchange.open(new URL(NetUtil.getLocalAddress().getHostAddress(),
-                    sessionServerConfig.getServerPort()), serverHandlers
-                    .toArray(new ChannelHandler[serverHandlers.size()]));
+                                                   sessionServerConfig.getServerPort()), serverHandlers
+                                                   .toArray(new ChannelHandler[serverHandlers.size()]));
 
                 LOGGER.info("Session server started! port:{}", sessionServerConfig.getServerPort());
             }
         } catch (Exception e) {
             serverStart.set(false);
             LOGGER.error("Session server start error! port:{}",
-                sessionServerConfig.getServerPort(), e);
+                         sessionServerConfig.getServerPort(), e);
             throw new RuntimeException("Session server start error!", e);
         }
     }
@@ -216,7 +220,7 @@ public class SessionServerBootstrap {
         } catch (Exception e) {
             dataStart.set(false);
             LOGGER.error("Data server connected server error! port:{}",
-                sessionServerConfig.getDataServerPort(), e);
+                         sessionServerConfig.getDataServerPort(), e);
             throw new RuntimeException("Data server connected server error!", e);
         }
     }
@@ -232,7 +236,7 @@ public class SessionServerBootstrap {
                 metaClient = metaNodeExchanger.connectServer();
 
                 URL leaderUrl = new URL(raftClientManager.getLeader().getIp(),
-                    sessionServerConfig.getMetaServerPort());
+                                        sessionServerConfig.getMetaServerPort());
 
                 registerSessionNode(leaderUrl);
 
@@ -245,12 +249,12 @@ public class SessionServerBootstrap {
                 fetchBlackList();
 
                 LOGGER.info("MetaServer connected meta server! Port:{}",
-                    sessionServerConfig.getMetaServerPort());
+                            sessionServerConfig.getMetaServerPort());
             }
         } catch (Exception e) {
             metaStart.set(false);
             LOGGER.error("MetaServer connected server error! Port:{}",
-                sessionServerConfig.getMetaServerPort(), e);
+                         sessionServerConfig.getMetaServerPort(), e);
             throw new RuntimeException("MetaServer connected server error!", e);
         }
     }
@@ -258,22 +262,22 @@ public class SessionServerBootstrap {
     private void registerSessionNode(URL leaderUrl) {
         URL clientUrl = new URL(NetUtil.getLocalAddress().getHostAddress(), 0);
         SessionNode sessionNode = new SessionNode(clientUrl,
-            sessionServerConfig.getSessionServerRegion());
+                                                  sessionServerConfig.getSessionServerRegion());
         Object ret = sendMetaRequest(sessionNode, leaderUrl);
         if (ret instanceof NodeChangeResult) {
             NodeChangeResult nodeChangeResult = (NodeChangeResult) ret;
             NodeManager nodeManager = NodeManagerFactory.getNodeManager(nodeChangeResult
-                .getNodeType());
+                                                                                .getNodeType());
             //update data node info
             nodeManager.updateNodes(nodeChangeResult);
             LOGGER.info("Register MetaServer Session Node success!get data node list {}",
-                nodeChangeResult.getNodes());
+                        nodeChangeResult.getNodes());
         }
     }
 
     private void fetchStopPushSwitch(URL leaderUrl) {
         FetchProvideDataRequest fetchProvideDataRequest = new FetchProvideDataRequest(
-            ValueConstants.STOP_PUSH_DATA_SWITCH_DATA_ID);
+                ValueConstants.STOP_PUSH_DATA_SWITCH_DATA_ID);
         Object ret = sendMetaRequest(fetchProvideDataRequest, leaderUrl);
         if (ret instanceof ProvideData) {
             ProvideData provideData = (ProvideData) ret;
@@ -285,7 +289,7 @@ public class SessionServerBootstrap {
 
     private void fetchEnableDataRenewSnapshot(URL leaderUrl) {
         FetchProvideDataRequest fetchProvideDataRequest = new FetchProvideDataRequest(
-            ValueConstants.ENABLE_DATA_RENEW_SNAPSHOT);
+                ValueConstants.ENABLE_DATA_RENEW_SNAPSHOT);
         Object data = sendMetaRequest(fetchProvideDataRequest, leaderUrl);
         if (data instanceof ProvideData) {
             ProvideData provideData = (ProvideData) data;
@@ -301,13 +305,13 @@ public class SessionServerBootstrap {
         Object ret;
         try {
             ret = metaClient.sendSync(leaderUrl, request,
-                sessionServerConfig.getMetaNodeExchangeTimeOut());
+                                      sessionServerConfig.getMetaNodeExchangeTimeOut());
         } catch (Exception e) {
             URL leaderUrlNew = new URL(raftClientManager.refreshLeader().getIp(),
-                sessionServerConfig.getMetaServerPort());
+                                       sessionServerConfig.getMetaServerPort());
             LOGGER.warn("request send error!It will be retry once to new leader {}!", leaderUrlNew);
             ret = metaClient.sendSync(leaderUrlNew, request,
-                sessionServerConfig.getMetaNodeExchangeTimeOut());
+                                      sessionServerConfig.getMetaNodeExchangeTimeOut());
         }
         return ret;
     }
@@ -323,14 +327,14 @@ public class SessionServerBootstrap {
             if (httpStart.compareAndSet(false, true)) {
                 bindResourceConfig();
                 httpServer = jerseyExchange.open(
-                    new URL(NetUtil.getLocalAddress().getHostAddress(), sessionServerConfig
-                        .getHttpServerPort()), new ResourceConfig[] { jerseyResourceConfig });
+                        new URL(NetUtil.getLocalAddress().getHostAddress(), sessionServerConfig
+                                .getHttpServerPort()), new ResourceConfig[]{jerseyResourceConfig});
                 LOGGER.info("Open http server port {} success!",
-                    sessionServerConfig.getHttpServerPort());
+                            sessionServerConfig.getHttpServerPort());
             }
         } catch (Exception e) {
             LOGGER.error("Open http server port {} error!",
-                sessionServerConfig.getHttpServerPort(), e);
+                         sessionServerConfig.getHttpServerPort(), e);
             httpStart.set(false);
             throw new RuntimeException("Open http server error!", e);
         }

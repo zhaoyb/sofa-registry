@@ -16,28 +16,28 @@
  */
 package com.alipay.sofa.registry.server.session.bootstrap;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import com.alipay.sofa.registry.log.Logger;
+import com.alipay.sofa.registry.log.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.SmartLifecycle;
 
-import com.alipay.sofa.registry.log.Logger;
-import com.alipay.sofa.registry.log.LoggerFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * SmartLifecycle for SessionServerBootstrap
+ *
  * @author shangyu.wh
  * @version $Id: SessionServerInitializerConfiguration.java, v 0.1 2017-11-14 11:41 synex Exp $
  */
 public class SessionServerInitializer implements SmartLifecycle {
 
-    private static final Logger    LOGGER  = LoggerFactory
-                                               .getLogger(SessionServerInitializer.class);
+    private static final Logger LOGGER = LoggerFactory
+            .getLogger(SessionServerInitializer.class);
 
     @Autowired
     private SessionServerBootstrap sessionServerBootstrap;
 
-    private AtomicBoolean          running = new AtomicBoolean(false);
+    private AtomicBoolean running = new AtomicBoolean(false);
 
     @Override
     public boolean isAutoStartup() {
